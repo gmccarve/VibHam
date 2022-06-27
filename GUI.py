@@ -175,8 +175,10 @@ class TabWidget(QTabWidget):
 
         # Load Example File
 
-        self.load_HF_example_btn = QPushButton("Load HF Example")
+        self.load_HF_example_btn = QPushButton("&Load HF Example")
         self.load_HF_example_btn.clicked.connect(self.__load_HF_example_data)
+        self.load_HF_example_shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
+        self.load_HF_example_shortcut.activated.connect(self.__load_HF_example_data)
         self.load_HF_example_btn.setFixedWidth(120)
 
         self.load_CO_example_btn = QPushButton("Load CO Example")
@@ -455,7 +457,6 @@ class TabWidget(QTabWidget):
         self.__show_datatable()
         self.__plot_datatable()
 
-
     def __browsefiles(self):
         try:
             self.__clear_data_values()
@@ -658,8 +659,8 @@ class TabWidget(QTabWidget):
 
         # Initialize some of the variables
 
-        self.pec_order = 2          # Order of power series expansion
-        self.dip_order = 1          # Order of dipole moment function
+        self.pec_order = 10         # Order of power series expansion
+        self.dip_order = 5          # Order of dipole moment function
         self.pec_inter_pts = 10000  # Number of interpolation points for potential energy curve
         self.dip_inter_pts = 10000  # Number of interpolation points for dipole moment function
         
@@ -688,22 +689,22 @@ class TabWidget(QTabWidget):
         # Select Power Series order and Number of Interpolation Points
         self.pec_order_box = QComboBox()
         self.pec_order_box.addItems(['2', '4', '6', '8', '10', '12', '14', '16'])
+        self.pec_order_box.setCurrentText(str(self.pec_order))
         self.pec_order_box.currentIndexChanged.connect(self.__pec_order_box_selected)
         self.pec_order_box.currentIndexChanged.connect(self.__interpolate_data)
         self.pec_order_box.currentIndexChanged.connect(self.__plot_inter_energy)
         self.pec_order_box.currentIndexChanged.connect(self.__plot_inter_energy_err)
         self.pec_order_box.setToolTip("Order of the power series expansion for the energy curve")
-        self.pec_order_box.setCurrentText('2')
         self.pec_order_box.setFixedWidth(100)
 
         self.dip_order_box = QComboBox()
         self.dip_order_box.addItems(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
+        self.dip_order_box.setCurrentText(str(self.dip_order))
         self.dip_order_box.currentIndexChanged.connect(self.__dip_order_box_selected)
         self.dip_order_box.currentIndexChanged.connect(self.__interpolate_data)
         self.dip_order_box.currentIndexChanged.connect(self.__plot_inter_dipole)
         self.dip_order_box.currentIndexChanged.connect(self.__plot_inter_dipole_err)
         self.dip_order_box.setToolTip("Order of power series expansion for the dipole moment curve")
-        self.dip_order_box.setCurrentText('1')
         self.dip_order_box.setFixedWidth(100)
 
         self.inter_lab = QLabel("Interpolation Points")
@@ -1466,6 +1467,14 @@ class TabWidget(QTabWidget):
             self.max_trunc_val = self.maxV
             self.vib_plot.axes.cla()
 
+            self.vib_sim_spec_v_val.setRange(0, self.maxV)
+            self.vib_sim_spec_v_val.setValue(self.maxV)
+            self.rot_sim_spec_v_val.setRange(-1, self.maxV)
+            self.rot_sim_spec_v_val.setValue(0)
+            self.rov_sim_spec_v_val.setRange(0, self.maxV)
+            self.rov_sim_spec_v_val.setValue(self.maxV)
+
+
         except:
             self.errorText = "Maximum ν value must be an integer"
             self.__openErrorMessage()
@@ -1496,6 +1505,17 @@ class TabWidget(QTabWidget):
             
                     self.view_wfs_j_box.setRange(0, self.maxJ)
                     self.tps_box.setRange(0, self.maxJ)
+                
+                    self.vib_sim_spec_j_val.setRange(-1, self.maxJ)
+                    self.vib_sim_spec_j_val.setValue(0)
+                    self.rot_sim_spec_j_val.setRange(0, self.maxJ)
+                    self.rot_sim_spec_j_val.setValue(self.maxJ)
+                    self.rov_sim_spec_j_val.setRange(0, self.maxJ)
+                    self.rov_sim_spec_j_val.setValue(self.maxJ)
+
+                    self.__change_vib_method()
+                    self.__change_rot_method()
+                    self.__change_rov_method()
 
                 else:
                     self.rot_spec_order_box.setRange(0, min(int(self.maxJ), 8))
@@ -1743,6 +1763,13 @@ class TabWidget(QTabWidget):
             self.trunc_err_arr = diff
             self.max_trunc_val = diff[0]
             self.__rot_spec_changed()
+
+            self.vib_sim_spec_v_val.setRange(0, self.max_trunc_val)
+            self.vib_sim_spec_v_val.setValue(self.max_trunc_val)
+            self.rot_sim_spec_v_val.setRange(-1, self.max_trunc_val)
+            self.rot_sim_spec_v_val.setValue(0)
+            self.rov_sim_spec_v_val.setRange(0, self.max_trunc_val)
+            self.rov_sim_spec_v_val.setValue(self.max_trunc_val)
 
             self.view_wfs_v_box.setRange(0, self.max_trunc_val-1)
 
@@ -2761,7 +2788,9 @@ class TabWidget(QTabWidget):
         self.rot_cutoff = 0.001
         self.rov_cutoff = 0.001
 
-        self.vib_method = 'ho'
+        self.vib_method = 'pop'
+        self.rot_method = 'pop'
+        self.rov_method = 'pop'
 
         # Chosen cutoff ranges
 
@@ -2788,7 +2817,7 @@ class TabWidget(QTabWidget):
         # Refresh Button
 
         self.sim_spec_refresh_btn = QPushButton("Refresh")
-        self.sim_spec_refresh_btn.setFixedWidth(100)
+        self.sim_spec_refresh_btn.setFixedWidth(250)
         self.sim_spec_refresh_btn.clicked.connect(self.__change_temp)
 
         # Vibrational spectra
@@ -2802,7 +2831,7 @@ class TabWidget(QTabWidget):
         self.vib_sim_spec_j_val.setFixedWidth(50)
 
         self.vib_sim_spec_v_val = QSpinBox()
-        self.vib_sim_spec_v_val.setRange(1, 40)
+        self.vib_sim_spec_v_val.setRange(1, self.max_trunc_val)
         self.vib_sim_spec_v_val.setValue(15)
         self.vib_sim_spec_v_val.setFixedWidth(50)
         self.vib_sim_spec_v_val.valueChanged.connect(self.__change_vib_sim_spec)
@@ -2811,14 +2840,20 @@ class TabWidget(QTabWidget):
         self.vib_sim_spec_cutoff.editingFinished.connect(self.__change_vib_sim_spec)
 
         self.vib_sim_spec_plot = PlotCurve_111(self)
-
-        self.vib_sim_spec_method_ho = QRadioButton("Harmonic Oscillator")
-        self.vib_sim_spec_method_en = QRadioButton("Energy Levels")
+        self.vib_sim_spec_plot_tb = NavigationToolbar2QT(self.vib_sim_spec_plot, self)
+    
+        self.vib_sim_spec_method_group = QButtonGroup(self)
+    
+        self.vib_sim_spec_method_pop = QRadioButton("Population")
+        self.vib_sim_spec_method_int = QRadioButton("Intensity")
         
-        self.vib_sim_spec_method_ho.setChecked(True)
+        self.vib_sim_spec_method_pop.setChecked(True)
 
-        self.vib_sim_spec_method_ho.toggled.connect(lambda:self.__change_vib_method(self.vib_sim_spec_method_ho))
-        self.vib_sim_spec_method_en.toggled.connect(lambda:self.__change_vib_method(self.vib_sim_spec_method_en))
+        self.vib_sim_spec_method_pop.toggled.connect(lambda:self.__change_vib_method(self.vib_sim_spec_method_pop))
+        self.vib_sim_spec_method_int.toggled.connect(lambda:self.__change_vib_method(self.vib_sim_spec_method_int))
+
+        self.vib_sim_spec_method_group.addButton(self.vib_sim_spec_method_pop)
+        self.vib_sim_spec_method_group.addButton(self.vib_sim_spec_method_int)
 
         # Rotational spectra
 
@@ -2826,26 +2861,31 @@ class TabWidget(QTabWidget):
         self.rot_sim_spec_j_lab = QLabel("Maximum J Value")
 
         self.rot_sim_spec_j_val = QSpinBox()
-        self.rot_sim_spec_j_val.setRange(0, 100)
-        self.rot_sim_spec_j_val.setValue(60)
+        self.rot_sim_spec_j_val.setRange(0, self.maxJ)
+        self.rot_sim_spec_j_val.setValue(self.maxJ)
         self.rot_sim_spec_j_val.valueChanged.connect(self.__change_rot_sim_spec)
         self.rot_sim_spec_j_val.setFixedWidth(50)
 
         self.rot_sim_spec_v_val = QSpinBox()
-        self.rot_sim_spec_v_val.setRange(0, self.max_trunc_val)
+        self.rot_sim_spec_v_val.setRange(-1, self.max_trunc_val)
         self.rot_sim_spec_v_val.valueChanged.connect(self.__change_rot_sim_spec)
         self.rot_sim_spec_v_val.setFixedWidth(50)
 
         self.rot_sim_spec_plot = PlotCurve_111(self)
+        self.rot_sim_spec_plot_tb = NavigationToolbar2QT(self.rot_sim_spec_plot, self)
 
+        self.rot_sim_spec_method_group = QButtonGroup(self)
+        
+        self.rot_sim_spec_method_pop = QRadioButton("Population")
+        self.rot_sim_spec_method_int = QRadioButton("Intensity")
 
-        self.rot_sim_spec_method_rr = QRadioButton("Rigid Rotor")
-        self.rot_sim_spec_method_en = QRadioButton("Energy Levels")
+        self.rot_sim_spec_method_pop.setChecked(True)
 
-        self.rot_sim_spec_method_rr.setChecked(True)
+        self.rot_sim_spec_method_pop.toggled.connect(lambda:self.__change_rot_method(self.rot_sim_spec_method_pop))
+        self.rot_sim_spec_method_int.toggled.connect(lambda:self.__change_rot_method(self.rot_sim_spec_method_int))
 
-        self.rot_sim_spec_method_rr.toggled.connect(self.__change_rot_sim_spec)
-        self.rot_sim_spec_method_en.toggled.connect(self.__change_rot_sim_spec)
+        self.rot_sim_spec_method_group.addButton(self.rot_sim_spec_method_pop)
+        self.rot_sim_spec_method_group.addButton(self.rot_sim_spec_method_int)
 
         # Rovibrational spectra
 
@@ -2858,11 +2898,21 @@ class TabWidget(QTabWidget):
         self.rov_sim_spec_j_val.setFixedWidth(50)
 
         self.rov_sim_spec_v_val = QSpinBox()
-        self.rov_sim_spec_v_val.setRange(1, self.max_trunc_val)
+        self.rov_sim_spec_v_val.setRange(0, self.max_trunc_val)
         self.rov_sim_spec_v_val.valueChanged.connect(self.__change_rov_sim_spec)
         self.rov_sim_spec_v_val.setFixedWidth(50)
 
         self.rov_sim_spec_plot = PlotCurve_111(self)
+        self.rov_sim_spec_plot_tb = NavigationToolbar2QT(self.rov_sim_spec_plot, self)
+
+        self.rov_sim_spec_method_pop = QRadioButton("Population")
+        self.rov_sim_spec_method_int = QRadioButton("Intensity")
+
+        self.rov_sim_spec_method_pop.setChecked(True)
+
+        self.rov_sim_spec_method_pop.toggled.connect(lambda:self.__change_rov_method(self.rov_sim_spec_method_pop))
+        self.rov_sim_spec_method_int.toggled.connect(lambda:self.__change_rov_method(self.rov_sim_spec_method_int))
+
         
         # Define the layout of the tab using a grid
 
@@ -2876,8 +2926,7 @@ class TabWidget(QTabWidget):
         self.tab9.grid_layout.addWidget(self.temp_str, row, 6, 1, 1, alignment=Qt.AlignCenter)
 
         row+=1
-        #self.tab9.grid_layout.addWidget(QLabel(""), row, 0, 1, 12)
-        self.tab9.grid_layout.addWidget(self.sim_spec_refresh_btn, row, 6, 1, 4)
+        self.tab9.grid_layout.addWidget(self.sim_spec_refresh_btn, row, 5, 1, 4)
 
         row+=1 
         self.tab9.grid_layout.addWidget(self.vib_sim_spec_j_lab, row, 1, 1, 1, alignment=Qt.AlignCenter)
@@ -2903,21 +2952,26 @@ class TabWidget(QTabWidget):
         self.tab9.grid_layout.addWidget(self.rov_cutoff_lab, row, 9, 1, 1, alignment=Qt.AlignCenter)
         self.tab9.grid_layout.addWidget(self.rov_cutoff_val, row, 10, 1, 1, alignment=Qt.AlignCenter)
 
-
         row+=1
         self.tab9.grid_layout.addWidget(self.vib_sim_spec_plot, row, 0, 6, 4, alignment=Qt.AlignCenter)
         self.tab9.grid_layout.addWidget(self.rot_sim_spec_plot, row, 4, 6, 4, alignment=Qt.AlignCenter)
         self.tab9.grid_layout.addWidget(self.rov_sim_spec_plot, row, 8, 6, 4, alignment=Qt.AlignCenter)
 
         row+=6
-        self.tab9.grid_layout.addWidget(self.vib_sim_spec_method_ho, row, 1, 1, 1, alignment=Qt.AlignCenter)
-        self.tab9.grid_layout.addWidget(self.vib_sim_spec_method_en, row, 2, 1, 1, alignment=Qt.AlignCenter)
-        self.tab9.grid_layout.addWidget(self.rot_sim_spec_method_rr, row, 5, 1, 1, alignment=Qt.AlignCenter)
-        self.tab9.grid_layout.addWidget(self.rot_sim_spec_method_en, row, 6, 1, 1, alignment=Qt.AlignCenter)
-
+        self.tab9.grid_layout.addWidget(self.vib_sim_spec_plot_tb, row, 1, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rot_sim_spec_plot_tb, row, 5, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rov_sim_spec_plot_tb, row, 9, 1, 2, alignment=Qt.AlignCenter)
 
         row+=1
-        self.tab9.grid_layout.addWidget(QLabel(""), row, 0, 5, 12)
+        self.tab9.grid_layout.addWidget(self.vib_sim_spec_method_pop, row, 1, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rot_sim_spec_method_pop, row, 5, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rov_sim_spec_method_pop, row, 9, 1, 2, alignment=Qt.AlignCenter)
+
+        row+=1
+        self.tab9.grid_layout.addWidget(self.vib_sim_spec_method_int, row, 1, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rot_sim_spec_method_int, row, 5, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rov_sim_spec_method_int, row, 9, 1, 2, alignment=Qt.AlignCenter)
+
 
         
         self.tab9.setLayout(self.tab9.grid_layout)
@@ -2942,117 +2996,304 @@ class TabWidget(QTabWidget):
 
 
     def __change_vib_method(self, b):
-        if b.text() == "Harmonic Oscillator":
+        if b.text() == "Population":
             if b.isChecked() == True:
-                self.vib_method = 'ho'
+                self.vib_method = 'pop'
             else:
-                self.vib_method = 'en'
-        elif b.text() == 'Energy Levels':
+                self.vib_method = 'int'
+        elif b.text() == "Intensity":
             if b.isChecked() == True:
-                self.vib_method = 'en'
+                self.vib_method = 'int'
             else:
-                self.vib_method = 'ho'
+                self.vib_method = 'pop'
 
-        if self.vib_method == 'en':
+        if self.vib_method == 'int':
             self.vib_sim_spec_v_val.setRange(1, self.max_trunc_val)
             self.vib_sim_spec_v_val.setValue(self.max_trunc_val)
 
-        elif self.vib_method == 'ho':
+        elif self.vib_method == 'pop':
             self.vib_sim_spec_v_val.setRange(1, 15)
             self.vib_sim_spec_v_val.setValue(15)
 
-    def __change_vib_sim_spec(self):
-        try:
-    
-            self.vib_cutoff = float(self.vib_cutoff_val.text())
+        self.__change_vib_sim_spec()
 
+    def __change_rot_method(self, b):
+        if b.text() == "Population":
+            if b.isChecked() == True:
+                self.rot_method = 'pop'
+            else:
+                self.rot_method = 'int'
+        elif b.text() == "Intensity":
+            if b.isChecked() == True:
+                self.rot_method = 'int'
+            else:
+                self.rot_method = 'pop'
+
+        if self.rot_method == 'int':
+            self.rot_sim_spec_j_val.setRange(1, self.maxJ)
+            self.rot_sim_spec_j_val.setValue(self.maxJ)
+
+        elif self.rot_method == 'pop':
+            self.rot_sim_spec_v_val.setRange(1, self.maxJ)
+            self.rot_sim_spec_v_val.setValue(self.maxJ)
+
+        self.__change_rot_sim_spec()
+
+    def __change_rov_method(self, b):
+        if b.text() == "Population":
+            if b.isChecked() == True:
+                self.rov_method = 'pop'
+            else:
+                self.rov_method = 'int'
+        elif b.text() == "Intensity":
+            if b.isChecked() == True:
+                self.rov_method = 'int'
+            else:
+                self.rov_method = 'pop'
+
+        if self.rov_method == 'int':
+            self.rov_sim_spec_j_val.setRange(1, self.maxJ)
+            self.rov_sim_spec_j_val.setValue(self.maxJ)
+            self.rov_sim_spec_v_val.setRange(1, self.max_trunc_val)
+            self.rov_sim_spec_v_val.setValue(self.max_trunc_val)
+
+        elif self.rov_method == 'pop':
+            self.rov_sim_spec_j_val.setRange(1, 30)
+            self.rov_sim_spec_j_val.setValue(30)
+            self.rov_sim_spec_v_val.setRange(1, 15)
+            self.rov_sim_spec_v_val.setValue(15)
+
+
+    def __change_vib_sim_spec(self):
+
+        try:
+            self.vib_cutoff = float(self.vib_cutoff_val.text())
+            val, vec = self.__diagonalize(self.total)
+            
+            sim = Spectra()
+
+            J  = int(self.vib_sim_spec_j_val.value())
+            V = int(self.vib_sim_spec_v_val.value())
+
+            if J == -1:
+                method = 'rov'
+            else:
+                method = 'vib'
+
+            pop = sim.SimulatedVibrationalPop(temp=self.temp, 
+                                           J=J,
+                                           v=V,
+                                           method=method,
+                                           vals=val,
+                                           )
+
+            if self.vib_method == 'pop':
+                max_print_v = V
+
+                self.vib_sim_spec_plot.axes.cla()
+
+                if J != -1:
+                    for v_ in range(pop.shape[1]):
+                        if pop[1,v_] > self.vib_cutoff:
+                            self.vib_sim_spec_plot.axes.vlines(v_, 0, pop[1,v_])
+                        else:
+                            max_print_v = v_
+                else:
+                    for j in range(pop.shape[0]):
+                        for v_ in range(V):
+                            if pop[j,1,v_] > self.vib_cutoff:
+                                self.vib_sim_spec_plot.axes.vlines(v_, 0, pop[j,1,v_])
+                            else:
+                                max_print_v = v_
+
+                self.vib_sim_spec_plot.axes.set_xlabel("ν")
+                self.vib_sim_spec_plot.axes.set_ylabel("Population")
+                self.vib_sim_spec_plot.axes.set_xticks(np.arange(0, max_print_v))
+                self.vib_sim_spec_plot.draw()
+
+            elif self.vib_method == 'int':
+
+                self.vib_sim_spec_plot.axes.cla()
+
+                inten = sim.SimulatedVibrationalInt(J=J,
+                                                v=V,
+                                                val=val,
+                                                vec=vec,
+                                                tdm=self.tdm,
+                                                pop=pop, 
+                                                method=method)
+
+                if J != -1:
+                    for v_ in range(inten.shape[1]):
+                        if abs(inten[1,v_]) > self.vib_cutoff:
+                            self.vib_sim_spec_plot.axes.vlines(inten[0,v_], 0, abs(inten[1,v_]))
+                else:
+                    CHARS = "0123456789ABCDEF"
+
+                    for j in range(inten.shape[0]):
+                        leg = False
+                        color = "#"
+                        for k in range(6):
+                            color += CHARS[np.random.randint(0, 15)]
+                        for v_ in range(inten.shape[2]):
+                            if abs(inten[j,1,v_]) > self.vib_cutoff:
+                                if leg == False:
+                                    self.vib_sim_spec_plot.axes.vlines(inten[j,0,v_], 0, abs(inten[j,1,v_]), color=color, label='J=' + str(j))
+                                    leg = True
+                                else:
+                                    self.vib_sim_spec_plot.axes.vlines(inten[j,0,v_], 0, abs(inten[j,1,v_]), color=color)
+
+                    self.vib_sim_spec_plot.axes.legend()
+
+                self.vib_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
+                self.vib_sim_spec_plot.axes.set_ylabel("Intensity (s$^{-1}$)")
+                self.vib_sim_spec_plot.draw()
+ 
+        except Exception as e:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
+
+    def __change_rot_sim_spec(self):
+        try:
+            self.rot_cutoff = float(self.rot_cutoff_val.text())
             val, vec = self.__diagonalize(self.total)
 
             sim = Spectra()
 
-            self.vib_spec_values_ = sim.Vibrational(val,
-                                                    0,
-                                                    self.maxJ
-                                                    )
+            J = int(self.rot_sim_spec_j_val.value())
+            v = int(self.rot_sim_spec_v_val.value())
 
-            pop = sim.SimulatedVibrational(temp=self.temp, 
-                                           omega=self.vib_spec_values_[0],
-                                           J=int(self.vib_sim_spec_j_val.value()),
-                                           v=int(self.vib_sim_spec_v_val.value()),
-                                           method=self.vib_method,
-                                           vals=val[:,-int(self.vib_sim_spec_v_val.value()):]
-                                           )
+            if v == -1:
+                method = 'rov'
+            else:
+                method = 'rot'
+
+            pop = sim.SimulatedRotationalPop(temp=self.temp,
+                                          J=J,
+                                          v=v,
+                                          method=method,
+                                          vals=val,
+                                          )
+
+            self.rot_sim_spec_plot.axes.cla()
+
+            if self.rot_method == 'pop':
+                max_print_j = J
+
+                if v != -1:
+                    for j_ in range(pop.shape[1]):
+                        if pop[1,j_] > self.rot_cutoff:
+                            self.rot_sim_spec_plot.axes.vlines(j_, 0, pop[1,j_])
+                        else:
+                            max_print_j = j_
+                            break
+                else:
+                    CHARS = "0123456789ABCDEF"
+
+                    for v in range(pop.shape[0]):
+                        leg = False
+                        color = "#"
+                        for k in range(6):
+                            color += CHARS[np.random.randint(0, 15)]
+                        for j_ in range(J):
+                            if pop[v,1,j_] > self.rot_cutoff:
+                                if leg == False:
+                                    self.rot_sim_spec_plot.axes.vlines(j_, 0, pop[v,1,j_], color=color, label='ν=' + str(v))
+                                    leg = True
+                                else:
+                                    self.rot_sim_spec_plot.axes.vlines(j_, 0, pop[v,1,j_], color=color)
+                            else:
+                                max_print_j = j_
+                                break
+
+                        self.rot_sim_spec_plot.axes.legend()
+
+                self.rot_sim_spec_plot.axes.set_xlabel("J")
+                self.rot_sim_spec_plot.axes.set_ylabel("Population")
+                self.rot_sim_spec_plot.axes.set_xticks(np.arange(0, max_print_j, 2))
+                self.rot_sim_spec_plot.draw()
+
+            elif self.rot_method == 'int':
+
+                val, vec = self.__diagonalize(self.total)
+
+                self.rot_sim_spec_plot.axes.cla()
+
+                inten = sim.SimulatedRotationalInt(J=J,
+                                                   v=v,
+                                                   val=val,
+                                                   vec=vec,
+                                                   tdm=self.tdm,
+                                                   pop=pop,
+                                                   method=method)
+
+                if v != -1:
+                    for j_ in range(inten.shape[1]):
+                        if abs(inten[1,j_]) > self.rot_cutoff:
+                            self.rot_sim_spec_plot.axes.vlines(inten[0,j_], 0, abs(inten[1,j_]))
+                else:
+                    CHARS = "0123456789ABCDEF"
+
+                    for j in range(inten.shape[0]):
+                        leg = False
+                        color = "#"
+                        for k in range(6):
+                            color += CHARS[np.random.randint(0, 15)]
+                        for v_ in range(inten.shape[2]):
+                            if abs(inten[j,1,v_]) > self.vib_cutoff:
+                                if leg == False:
+                                    self.rot_sim_spec_plot.axes.vlines(inten[j,0,v_], 0, abs(inten[j,1,v_]), color=color, label='J=' + str(j))
+                                    leg = True
+                                else:
+                                    self.rot_sim_spec_plot.axes.vlines(inten[j,0,v_], 0, abs(inten[j,1,v_]), color=color)
+
+                    self.rot_sim_spec_plot.axes.legend()
+
+                self.rot_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
+                self.rot_sim_spec_plot.axes.set_ylabel("Intensity (s$^{-1}$)")
+                self.rot_sim_spec_plot.draw()
+
+        except Exception as e:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
+
+    def __change_rov_sim_spec(self):
+        try:
+            self.rov_cutoff = float(self.rov_cutoff_val.text())
+            val, vec = self.__diagonalize(self.total)
+
+            sim = Spectra()
+
+            J = int(self.rov_sim_spec_j_val.value())
+            v = int(self.rov_sim_spec_v_val.value())
             
-            self.vib_sim_spec_plot.axes.cla()
+            pop = sim.SimulatedRovibrationalPop(temp=self.temp,
+                                             J=J,
+                                             v=v,
+                                             vals=val,
+                                             )
 
-            if int(self.vib_sim_spec_j_val.value()) != -1:
-                for v_ in range(pop.shape[1]):
-                    if pop[1,v_] > self.vib_cutoff:
-                        self.vib_sim_spec_plot.axes.vlines(pop[0,v_], 0, pop[1,v_])
+            self.rov_sim_spec_plot.axes.cla()
+
+            if self.rov_method == 'pop':
+                for en in range(pop.shape[1]):
+                    if pop[1,en] > self.rov_cutoff:
+                        self.rov_sim_spec_plot.axes.vlines(pop[0,en], 0, pop[1,en])
                     else:
                         break
-            else:
-                CHARS = "0123456789ABCDEF"
 
-                for j in range(pop.shape[0]):
-                    leg = False
-                    color = "#"
-                    for k in range(6):
-                        color += CHARS[np.random.randint(0, 15)]
-                    for v_ in range(pop.shape[2]):
-                        if pop[j,1,v_] > self.vib_cutoff:
-                            if leg == False:
-                                self.vib_sim_spec_plot.axes.vlines(pop[j,0,v_], 0, pop[j,1,v_], color=color, label='J=' + str(j))
-                                leg = True
-                            else:
-                                self.vib_sim_spec_plot.axes.vlines(pop[j,0,v_], 0, pop[j,1,v_], color=color)
-                        else:
-                            break
+                self.rov_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
+                self.rov_sim_spec_plot.axes.set_ylabel("Population")
+                self.rov_sim_spec_plot.draw()
 
-                    self.vib_sim_spec_plot.axes.legend()    
-
-            self.vib_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
-            self.vib_sim_spec_plot.axes.set_ylabel("Intensity")
-            self.vib_sim_spec_plot.draw()
-        
         except Exception as e:
             print (str(traceback.format_exc()))
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
-    def __change_rot_sim_spec(self):
-        sim = Spectra()
-        sim.SimulatedRotational(temp=self.temp)
 
-    def __change_rov_sim_spec(self):
-            
-        self.vib_cutoff = float(self.vib_cutoff_val.text())
 
-        val, vec = self.__diagonalize(self.total)
 
-        sim = Spectra()
-
-        pop = sim.SimulatedRovibrational(temp=self.temp,
-                                         J=int(self.rov_sim_spec_j_val.value()),
-                                         v=int(self.rov_sim_spec_v_val.value()),
-                                         vals=val
-                                         )
-
-        self.vib_sim_spec_plot.axes.cla()
-
-        try:
-            for v_ in range(pop.shape[1]):
-                if pop[1,v_] > self.vib_cutoff:
-                    self.rov_sim_spec_plot.axes.vlines(pop[0,v_], 0, pop[1,v_])
-                else:
-                    break
-
-        except:
-            pass
-
-        self.rov_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
-        self.rov_sim_spec_plot.axes.set_ylabel("Intensity")
-        self.rov_sim_spec_plot.draw()
 
 
 
