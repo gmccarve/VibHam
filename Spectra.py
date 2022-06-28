@@ -132,7 +132,7 @@ class Spectra():
         #   Vals        - Matrix of eigenvalues
         #   Vects       - Tensor of eigenvectors
         #   MaxLevel    - Maximum size of matrices
-        #   Dip_Check   - Boolean to print tdm values
+        #   Dip_Check   - print tdm values
         #   tdm         - Transition Dipole Moment Matrix
         #   args        - Input arguments
         #
@@ -282,100 +282,296 @@ class Spectra():
 
         return Y.flatten(), a
 
-    def SimulatedVibrational(self, *args, **kwargs):
+    def SimulatedVibrationalPop(self, *args, **kwargs):
         temp   = kwargs['temp']
-        omega  = kwargs['omega']
         J      = kwargs['J']
         v      = kwargs['v']
         method = kwargs['method']
         vals   = kwargs['vals']
 
-        if J != -1:
-            if method == 'ho':
-                exp = np.exp((-h * omega[J]*c_cm) / (2 * kb * temp))
-                q_vib = exp/(1-exp)
+        if method == 'vib':
+            vals = vals[J,:v]
+            pop = np.zeros((2, vals.size))
+            for vv in range(vals.size):
+                en = vals[vv]
+                pop[0,vv] = en
+                pop[1,vv] = np.exp(-1 * (en / J_cm) / (kb * temp))
 
-                pop = np.zeros((2, v))
-            
+            pop[1] /= np.sum(pop[1])
+
+        elif method == 'rov':
+            pop = np.zeros((vals.shape[0], 2, v))
+            for j in range(vals.shape[0]):
                 for vv in range(v):
-                    energy = h * omega[J]*c_cm * (vv + 0.5)
-                    pop[0,vv] = energy*J_cm
-                    pop[1,vv] = np.exp(-1*energy/(kb*temp)) / q_vib
-                
-                return pop
+                    pop[j,0,vv] = vals[j,vv]
+                    pop[j,1,vv] = np.exp(-1 * (vals[j,vv] / J_cm) / (kb * temp))
 
-            elif method == 'en':
-                pop = np.zeros((2, vals.shape[1]))
+                pop[j,1] /= np.sum(pop[j,1])
+
+        return pop
+
+    def SimulatedVibrationalInt(self, *args, **kwargs):
+        J    = kwargs['J']
+        v    = kwargs['v']
+        vecs = kwargs['vec']
+        vals = kwargs['val']
+        tdm  = kwargs['tdm']
+        pop  = kwargs['pop']
+        method = kwargs['method']
+
+        if method == 'vib':
+            cc = 0
+            int_mat = np.zeros((4, v*v+v))
+            for vv in range(v+1):
+                for vv_ in range(v):
+                    E_init  = vals[J,vv]
+                    E_final = vals[J,vv_]
+                    E = E_init - E_final
+
+                    t = np.matmul(vecs[J,vv,:], np.matmul(tdm, vecs[J,vv_,:])) / D_au
+
+                    if abs(E) > 0 and abs(t) > 0:
+                        f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * (t * D_CM)**2 / (2*J + 1)
+                        A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * (t * D_CM)**2 / ((2*J + 1) * (4*np.pi*eps_0))
+            
+                        int_mat[0,cc] = E
+                        int_mat[1,cc] = A * pop[1,vv_]
+                        int_mat[2,cc] = vv_
+                        int_mat[3,cc] = vv
+
+                        cc += 1
+
+        elif method == 'rov':
+            int_mat = np.zeros((vals.shape[0], 4, v**2))
+            for j in range(vals.shape[0]):
+                cc = 0
+                for vv in range(v):
+                    for vv_ in range(v):
+                        E_init  = vals[j,vv]
+                        E_final = vals[j,vv_]
+                        E = E_init - E_final
+
+                        t = np.matmul(vecs[j,vv,:], np.matmul(tdm, vecs[j,vv_,:])) / D_au
+
+                        if abs(E) > 0 and abs(t) > 0:
+                            f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * (t * D_CM)**2 / (2*j + 1)
+                            A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * (t * D_CM)**2 / ((2*j + 1) * (4*np.pi*eps_0))
+
+                            int_mat[j,0,cc] = E
+                            int_mat[j,1,cc] = A * pop[j,1,vv_]
+                            int_mat[j,2,cc] = vv_
+                            int_mat[j,3,cc] = vv
+
+                            cc += 1
+
+        return int_mat
+
+
+    def SimulatedRotationalPop(self, *args, **kwargs):
+        temp   = kwargs['temp']
+        J      = kwargs['J']
+        v      = kwargs['v']
+        method = kwargs['method']
+        vals   = kwargs['vals']
+
+        if method == 'rot':
+            if J == 0:
+                return np.zeros((2,1))
+            vals = vals[:J,v]
+            vals -= vals[0]
+            pop = np.zeros((2, vals.size))
+            for jj in range(vals.size):
+                en = vals[jj]
+                pop[0,jj] = en
+                pop[1,jj] = (2 * jj + 1) * np.exp(-1 * (en / J_cm) / (kb * temp))
+
+            pop[1] /= np.sum(pop[1])
+
+        elif method == 'rov':
+            if J == 0:
+                return np.zeros((1,2,1))
+            pop = np.zeros((vals.shape[0], 2, vals.shape[1]))
+            for j in range(vals.shape[0]):
                 for vv in range(vals.shape[1]):
-                    pop[0,vv] = vals[J,vv]
-                    pop[1,vv] = np.exp(-1 * (vals[J,vv] / J_cm) / (kb * temp))
+                    pop[j,0,vv] = vals[j,vv]
+                    pop[j,1,vv] = (2 * j + 1) * np.exp(-1 * (vals[j,vv] / J_cm) / (kb * temp))
 
-                pop[1] /= np.sum(pop[1])
-    
-                return pop
+                pop[j,1] /= np.sum(pop[j,1])
 
-        else:
-            if method == 'ho':
-                pop = np.zeros((omega.size, 2, v))
-                for j in range(omega.size):
-                    exp = np.exp((-h * omega[j]*c_cm) / (2 * kb * temp))
-                    q_vib = exp/(1-exp)
+        return pop
 
-                    for vv in range(v):
-                        energy = h * omega[j]*c_cm * (vv + 0.5)
-                        pop[j,0,vv] = energy*J_cm
-                        pop[j,1,vv] = np.exp(-1*energy/(kb*temp)) / q_vib
+    def SimulatedRotationalInt(self, *args, **kwargs):
+        J    = kwargs['J']
+        v    = kwargs['v']
+        vecs = kwargs['vec']
+        vals = kwargs['val']
+        tdm  = kwargs['tdm']
+        pop  = kwargs['pop']
+        method = kwargs['method']
 
-                return pop
+        if method == 'rot':
+            cc = 0
+            int_mat = np.zeros((4, 2*J))
+            for jj in range(0, J+1):
+                for jj_ in range(max(0, jj-1), min(jj+2, J)):
+                    E_init  = vals[jj,v]
+                    E_final = vals[jj_,v]
+                    E = E_init - E_final
 
-            elif method == 'en':
-                pop = np.zeros((omega.size, 2, vals.shape[1]))
-                for j in range(vals.shape[0]):
-                    for vv in range(vals.shape[1]):
-                        pop[j,0,vv] = vals[j,vv]
-                        pop[j,1,vv] = np.exp(-1 * (vals[j,vv] / J_cm) / (kb * temp))
+                    t = np.matmul(vecs[jj,v,:], np.matmul(tdm, vecs[jj_,v,:])) / D_au
 
-                    pop[j,1] /= np.sum(pop[j,1])
+                    if abs(E) > 0 and abs(t) > 0:
 
-                return pop
+                        if jj == jj_:        # Honl-London Factors
+                            S = 1
+                        elif jj < jj_:
+                            S = jj + 1
+                        else:
+                            S = jj
 
+                        f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*J + 1)
+                        A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*J + 1) * (4*np.pi*eps_0))
 
+                        int_mat[0,cc] = E
+                        int_mat[1,cc] = A * pop[1,jj_]
+                        int_mat[2,cc] = jj_
+                        int_mat[3,cc] = jj
 
-    def SimulatedRotational(self, *args, **kwargs):
-        temp = kwargs['temp']
+                        cc += 1
 
+        elif method == 'rov':
+            int_mat = np.zeros((vals.shape[0], 4, J**2))
+            for v in range(vals.shape[0]):
+                cc = 0
+                for jj in range(J):
+                    for jj_ in range(J):
+                        E_init  = vals[jj,v]
+                        E_final = vals[jj_,v]
+                        E = E_init - E_final
+                        
+                        t = np.matmul(vecs[jj,v,:], np.matmul(tdm, vecs[jj_,v,:])) / D_au
 
-    def SimulatedRovibrational(self, *args, **kwargs):
+                        if abs(E) > 0 and abs(t) > 0:
+
+                            if jj == jj_:        # Honl-London Factors
+                                S = 1
+                            elif jj < jj_:
+                                S = jj + 1
+                            else:
+                                S = jj
+
+                            f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*jj + 1)
+                            A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jj + 1) * (4*np.pi*eps_0))
+
+                            int_mat[v,0,cc] = E
+                            int_mat[v,1,cc] = A * pop[jj_,1,v]
+                            int_mat[v,2,cc] = jj_
+                            int_mat[v,3,cc] = jj
+
+                            cc += 1
+        
+        return int_mat
+        
+
+    def SimulatedRovibrationalPop(self, *args, **kwargs):
         temp = kwargs['temp']
         J    = kwargs['J']
         v    = kwargs['v']
         vals = kwargs['vals']
 
-        if J == 0 and v == 1:
-            vals = vals[0,0]
-            pop = np.array((vals, 1))
-            return pop
-        else:
-            vals = vals[:J+1, :v].flatten()
-            pop = np.zeros((2, vals.size))
+        if J == 0 and v == 0:
+            return np.zeros((4,1))
 
-            for en in range(vals.size):
-                pop[0,en] = vals[en]
-                pop[1,en] = np.exp(-1 * (vals[en] / J_cm) / (kb * temp))
+        if v == 0:
+            pop  = np.zeros((4,J))
+            vals = vals[:J,0]
+            for jj in range(vals.size):
+                en = vals[jj]
+                pop[0,jj] = en
+                pop[1,jj] = (2 * jj + 1) * np.exp(-1 * (en / J_cm) / (kb * temp))
+                pop[2,jj] = jj
+                pop[3,jj] = v
+                
+            pop[1] /= np.sum(pop[1])
+            return pop
+
+        elif J == 0:
+            pop  = np.zeros((4,v))
+            vals = vals[0,:v]
+            for vv in range(vals.size):
+                en = vals[vv]
+                pop[0,vv] = en
+                pop[1,vv] = np.exp(-1 * (en / J_cm) / (kb * temp))
+                pop[2,vv] = J
+                pop[3,vv] = vv
 
             pop[1] /= np.sum(pop[1])
+            return pop
 
+        else:
+            vals  = vals[:J+1,:v+1]
+            pop = np.zeros((4,vals.size))
+            c = 0
+            for jj in range(J+1):
+                for vv in range(v+1):
+                    en = vals[jj,vv]
+                    pop[0,c] = en
+                    pop[1,c] = (2 * jj + 1) * np.exp(-1 * (en / J_cm) / (kb * temp))
+                    pop[2,c] = jj
+                    pop[3,c] = vv
+                    c+=1
+
+            pop[1] /= np.sum(pop[1])
             return pop
 
 
 
+    def SimulatedRovibrationalInt(self, *args, **kwargs):
+        vec = kwargs['vec']
+        pop = kwargs['pop']
+        tdm = kwargs['tdm']
 
+        int_mat = np.zeros((8, pop.shape[1]*pop.shape[1]))
 
+        cc = 0
 
+        for x in range(pop.shape[1]):
+            j = int(pop[2,x])
+            v = int(pop[3,x])
+            E_final = pop[0,x]
+            for xx in range(pop.shape[1]):
+                jj = int(pop[2,xx])
+                vv = int(pop[3,xx])
+                E_init = pop[0,xx]
+                pop_init = pop[1,xx]
 
+                if abs(j-jj) < 2:
 
+                    E = E_final - E_init
 
+                    t = np.matmul(vec[j,v,:], np.matmul(tdm, vec[jj,vv,:])) / D_au
 
+                    if abs(E) > 0 and abs(t) > 0:
+                        if j == jj:        # Honl-London Factors
+                            S = 1
+                        elif j < jj:
+                            S = j + 1
+                        else:
+                            S = j
 
+                        f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*j + 1)
+                        A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*j + 1) * (4*np.pi*eps_0))
 
+                        int_mat[0,cc] = vv
+                        int_mat[1,cc] = jj
+                        int_mat[2,cc] = v
+                        int_mat[3,cc] = j
+                        int_mat[4,cc] = E_init
+                        int_mat[5,cc] = E_final
+                        int_mat[6,cc] = E
+                        int_mat[7,cc] = A * pop_init
+
+                        cc += 1  
+
+        return int_mat
 

@@ -86,6 +86,7 @@ class TabWidget(QTabWidget):
         self.path = os.path.abspath(__file__)
         self.path = "/" + "/".join(str(self.path).split("/")[1:-1]) + "/"
 
+
     def __exit_program(self):
         exit()
 
@@ -1221,7 +1222,7 @@ class TabWidget(QTabWidget):
         # Initialize some of the variables
 
         self.maxV = 20
-        self.maxJ = 3
+        self.maxJ = 10
 
         self.harmonic    = np.zeros((self.maxV+1, self.maxV+1))
         self.anharmonic  = np.zeros((self.maxV+1, self.maxV+1))
@@ -1467,13 +1468,9 @@ class TabWidget(QTabWidget):
             self.max_trunc_val = self.maxV
             self.vib_plot.axes.cla()
 
-            self.vib_sim_spec_v_val.setRange(0, self.maxV)
-            self.vib_sim_spec_v_val.setValue(self.maxV)
-            self.rot_sim_spec_v_val.setRange(-1, self.maxV)
-            self.rot_sim_spec_v_val.setValue(0)
-            self.rov_sim_spec_v_val.setRange(0, self.maxV)
-            self.rov_sim_spec_v_val.setValue(self.maxV)
-
+            self.__change_vib_limits()
+            self.__change_rot_limits()
+            self.__change_rov_limits()
 
         except:
             self.errorText = "Maximum ν value must be an integer"
@@ -1506,16 +1503,9 @@ class TabWidget(QTabWidget):
                     self.view_wfs_j_box.setRange(0, self.maxJ)
                     self.tps_box.setRange(0, self.maxJ)
                 
-                    self.vib_sim_spec_j_val.setRange(-1, self.maxJ)
-                    self.vib_sim_spec_j_val.setValue(0)
-                    self.rot_sim_spec_j_val.setRange(0, self.maxJ)
-                    self.rot_sim_spec_j_val.setValue(self.maxJ)
-                    self.rov_sim_spec_j_val.setRange(0, self.maxJ)
-                    self.rov_sim_spec_j_val.setValue(self.maxJ)
-
-                    self.__change_vib_method()
-                    self.__change_rot_method()
-                    self.__change_rov_method()
+                    self.__change_vib_limits()
+                    self.__change_rot_limits()
+                    self.__change_rov_limits()
 
                 else:
                     self.rot_spec_order_box.setRange(0, min(int(self.maxJ), 8))
@@ -2136,7 +2126,6 @@ class TabWidget(QTabWidget):
                                                           int(self.rot_spec_order)
                                                           )
         except Exception as e:
-            print ("HERE\n\n" + str(traceback.format_exc()))
             self.errorText = "HERE\n\n" + str(traceback.format_exc())
             self.__openErrorMessage()
 
@@ -2802,9 +2791,9 @@ class TabWidget(QTabWidget):
         self.rot_cutoff_val = QLineEdit(str(self.rot_cutoff))
         self.rov_cutoff_val = QLineEdit(str(self.rov_cutoff))
 
-        self.vib_cutoff_val.editingFinished.connect(self.__change_vib_sim_spec)
-        self.rot_cutoff_val.editingFinished.connect(self.__change_rot_sim_spec)
-        self.rov_cutoff_val.editingFinished.connect(self.__change_rov_sim_spec)
+        self.vib_cutoff_val.editingFinished.connect(self.__change_vib_cutoff)
+        self.rot_cutoff_val.editingFinished.connect(self.__change_rot_cutoff)
+        self.rov_cutoff_val.editingFinished.connect(self.__change_rov_cutoff)
 
         # Chosen Temperature
 
@@ -2823,16 +2812,17 @@ class TabWidget(QTabWidget):
         # Vibrational spectra
 
         self.vib_sim_spec_j_lab = QLabel("Rotational Surface")
-        self.vib_sim_spec_v_lab = QLabel("Maximum ν Value")
+        self.vib_sim_spec_v_lab = QLabel("Maximum ν States")
 
         self.vib_sim_spec_j_val = QSpinBox()
         self.vib_sim_spec_j_val.setRange(-1, self.maxJ)
+        self.vib_sim_spec_j_val.setValue(0)
         self.vib_sim_spec_j_val.valueChanged.connect(self.__change_vib_sim_spec)
         self.vib_sim_spec_j_val.setFixedWidth(50)
 
         self.vib_sim_spec_v_val = QSpinBox()
-        self.vib_sim_spec_v_val.setRange(1, self.max_trunc_val)
-        self.vib_sim_spec_v_val.setValue(15)
+        self.vib_sim_spec_v_val.setRange(0, self.max_trunc_val)
+        self.vib_sim_spec_v_val.setValue(0)
         self.vib_sim_spec_v_val.setFixedWidth(50)
         self.vib_sim_spec_v_val.valueChanged.connect(self.__change_vib_sim_spec)
 
@@ -2855,19 +2845,23 @@ class TabWidget(QTabWidget):
         self.vib_sim_spec_method_group.addButton(self.vib_sim_spec_method_pop)
         self.vib_sim_spec_method_group.addButton(self.vib_sim_spec_method_int)
 
+        self.vib_sim_spec_table = QPushButton("Vew Datatable")
+        self.vib_sim_spec_table.clicked.connect(self.__vib_spec_datatable)
+
         # Rotational spectra
 
         self.rot_sim_spec_v_lab = QLabel("Vibrational Surface")
-        self.rot_sim_spec_j_lab = QLabel("Maximum J Value")
+        self.rot_sim_spec_j_lab = QLabel("Maximum J States")
 
         self.rot_sim_spec_j_val = QSpinBox()
         self.rot_sim_spec_j_val.setRange(0, self.maxJ)
-        self.rot_sim_spec_j_val.setValue(self.maxJ)
+        self.rot_sim_spec_j_val.setValue(0)
         self.rot_sim_spec_j_val.valueChanged.connect(self.__change_rot_sim_spec)
         self.rot_sim_spec_j_val.setFixedWidth(50)
 
         self.rot_sim_spec_v_val = QSpinBox()
         self.rot_sim_spec_v_val.setRange(-1, self.max_trunc_val)
+        self.rot_sim_spec_v_val.setValue(0)
         self.rot_sim_spec_v_val.valueChanged.connect(self.__change_rot_sim_spec)
         self.rot_sim_spec_v_val.setFixedWidth(50)
 
@@ -2886,6 +2880,9 @@ class TabWidget(QTabWidget):
 
         self.rot_sim_spec_method_group.addButton(self.rot_sim_spec_method_pop)
         self.rot_sim_spec_method_group.addButton(self.rot_sim_spec_method_int)
+
+        self.rot_sim_spec_table = QPushButton("Vew Datatable")
+        self.rot_sim_spec_table.clicked.connect(self.__rot_spec_datatable)
 
         # Rovibrational spectra
 
@@ -2912,6 +2909,9 @@ class TabWidget(QTabWidget):
 
         self.rov_sim_spec_method_pop.toggled.connect(lambda:self.__change_rov_method(self.rov_sim_spec_method_pop))
         self.rov_sim_spec_method_int.toggled.connect(lambda:self.__change_rov_method(self.rov_sim_spec_method_int))
+
+        self.rov_sim_spec_table = QPushButton("Vew Datatable")
+        self.rov_sim_spec_table.clicked.connect(self.__rov_spec_datatable)
 
         
         # Define the layout of the tab using a grid
@@ -2972,8 +2972,12 @@ class TabWidget(QTabWidget):
         self.tab9.grid_layout.addWidget(self.rot_sim_spec_method_int, row, 5, 1, 2, alignment=Qt.AlignCenter)
         self.tab9.grid_layout.addWidget(self.rov_sim_spec_method_int, row, 9, 1, 2, alignment=Qt.AlignCenter)
 
+        row+=1
+        self.tab9.grid_layout.addWidget(self.vib_sim_spec_table, row, 1, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rot_sim_spec_table, row, 5, 1, 2, alignment=Qt.AlignCenter)
+        self.tab9.grid_layout.addWidget(self.rov_sim_spec_table, row, 9, 1, 2, alignment=Qt.AlignCenter)
 
-        
+
         self.tab9.setLayout(self.tab9.grid_layout)
 
 
@@ -2994,7 +2998,31 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
             self.temp_str.setText(str(self.temp))
 
+    def __change_vib_limits(self):
+        self.vib_sim_spec_v_val.setRange(1, self.max_trunc_val)
+        self.vib_sim_spec_v_val.setValue(self.max_trunc_val)
+        self.vib_sim_spec_j_val.setRange(-1, self.maxJ)
+        self.vib_sim_spec_j_val.setValue(0)
 
+        self.__change_vib_sim_spec()
+
+    def __change_rot_limits(self):
+        self.rot_sim_spec_j_val.setRange(0, self.maxJ)
+        self.rot_sim_spec_j_val.setValue(self.maxJ)
+        self.rot_sim_spec_v_val.setRange(-1, self.max_trunc_val)
+        self.rot_sim_spec_v_val.setValue(0)
+
+        self.__change_rot_sim_spec()
+
+    def __change_rov_limits(self):
+        self.rov_sim_spec_j_val.setRange(0, self.maxJ)
+        self.rov_sim_spec_j_val.setValue(0)
+        self.rov_sim_spec_v_val.setRange(0, self.max_trunc_val)
+        self.rov_sim_spec_v_val.setValue(0)
+        
+        self.__change_rov_sim_spec()
+
+    
     def __change_vib_method(self, b):
         if b.text() == "Population":
             if b.isChecked() == True:
@@ -3006,14 +3034,6 @@ class TabWidget(QTabWidget):
                 self.vib_method = 'int'
             else:
                 self.vib_method = 'pop'
-
-        if self.vib_method == 'int':
-            self.vib_sim_spec_v_val.setRange(1, self.max_trunc_val)
-            self.vib_sim_spec_v_val.setValue(self.max_trunc_val)
-
-        elif self.vib_method == 'pop':
-            self.vib_sim_spec_v_val.setRange(1, 15)
-            self.vib_sim_spec_v_val.setValue(15)
 
         self.__change_vib_sim_spec()
 
@@ -3029,14 +3049,6 @@ class TabWidget(QTabWidget):
             else:
                 self.rot_method = 'pop'
 
-        if self.rot_method == 'int':
-            self.rot_sim_spec_j_val.setRange(1, self.maxJ)
-            self.rot_sim_spec_j_val.setValue(self.maxJ)
-
-        elif self.rot_method == 'pop':
-            self.rot_sim_spec_v_val.setRange(1, self.maxJ)
-            self.rot_sim_spec_v_val.setValue(self.maxJ)
-
         self.__change_rot_sim_spec()
 
     def __change_rov_method(self, b):
@@ -3051,23 +3063,33 @@ class TabWidget(QTabWidget):
             else:
                 self.rov_method = 'pop'
 
-        if self.rov_method == 'int':
-            self.rov_sim_spec_j_val.setRange(1, self.maxJ)
-            self.rov_sim_spec_j_val.setValue(self.maxJ)
-            self.rov_sim_spec_v_val.setRange(1, self.max_trunc_val)
-            self.rov_sim_spec_v_val.setValue(self.max_trunc_val)
+        self.__change_rov_sim_spec()
 
-        elif self.rov_method == 'pop':
-            self.rov_sim_spec_j_val.setRange(1, 30)
-            self.rov_sim_spec_j_val.setValue(30)
-            self.rov_sim_spec_v_val.setRange(1, 15)
-            self.rov_sim_spec_v_val.setValue(15)
+
+    def __change_vib_cutoff(self):
+        try:
+            self.vib_cutoff = float(self.vib_cutoff_val.text())
+        except:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
+
+    def __change_rot_cutoff(self):
+        try:
+            self.rot_cutoff = float(self.rot_cutoff_val.text())
+        except:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
+
+    def __change_rov_cutoff(self):
+        try:
+            self.rov_cutoff = float(self.rov_cutoff_val.text())
+        except:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
 
 
     def __change_vib_sim_spec(self):
-
         try:
-            self.vib_cutoff = float(self.vib_cutoff_val.text())
             val, vec = self.__diagonalize(self.total)
             
             sim = Spectra()
@@ -3098,18 +3120,16 @@ class TabWidget(QTabWidget):
                             self.vib_sim_spec_plot.axes.vlines(v_, 0, pop[1,v_])
                         else:
                             max_print_v = v_
+                    self.vib_sim_spec_plot.axes.set_xlabel("ν")
+                    self.vib_sim_spec_plot.axes.set_ylabel("Population")
+                    self.vib_sim_spec_plot.axes.set_xticks(np.arange(0, max_print_v, 2))
+                    self.vib_sim_spec_plot.draw()
+                
                 else:
-                    for j in range(pop.shape[0]):
-                        for v_ in range(V):
-                            if pop[j,1,v_] > self.vib_cutoff:
-                                self.vib_sim_spec_plot.axes.vlines(v_, 0, pop[j,1,v_])
-                            else:
-                                max_print_v = v_
-
-                self.vib_sim_spec_plot.axes.set_xlabel("ν")
-                self.vib_sim_spec_plot.axes.set_ylabel("Population")
-                self.vib_sim_spec_plot.axes.set_xticks(np.arange(0, max_print_v))
-                self.vib_sim_spec_plot.draw()
+                    #TODO HEATMAP
+                    self.vib_sim_spec_plot.axes.cla()
+                    self.vib_sim_spec_plot.axes.scatter(0, 0)
+                    self.vib_sim_spec_plot.draw()
 
             elif self.vib_method == 'int':
 
@@ -3153,6 +3173,7 @@ class TabWidget(QTabWidget):
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
+
     def __change_rot_sim_spec(self):
         try:
             self.rot_cutoff = float(self.rot_cutoff_val.text())
@@ -3175,43 +3196,30 @@ class TabWidget(QTabWidget):
                                           vals=val,
                                           )
 
-            self.rot_sim_spec_plot.axes.cla()
-
             if self.rot_method == 'pop':
-                max_print_j = J
+                max_print_j = 0
+
+                self.rot_sim_spec_plot.axes.cla()
 
                 if v != -1:
+                    max_print_j = 0
                     for j_ in range(pop.shape[1]):
                         if pop[1,j_] > self.rot_cutoff:
                             self.rot_sim_spec_plot.axes.vlines(j_, 0, pop[1,j_])
                         else:
                             max_print_j = j_
-                            break
+                    self.rot_sim_spec_plot.axes.set_xlabel("J")
+                    self.rot_sim_spec_plot.axes.set_ylabel("Population")
+                    self.rot_sim_spec_plot.axes.set_xticks(np.arange(0, max(J, max_print_j), 2))
+                    self.rot_sim_spec_plot.draw()
+
+
                 else:
-                    CHARS = "0123456789ABCDEF"
-
-                    for v in range(pop.shape[0]):
-                        leg = False
-                        color = "#"
-                        for k in range(6):
-                            color += CHARS[np.random.randint(0, 15)]
-                        for j_ in range(J):
-                            if pop[v,1,j_] > self.rot_cutoff:
-                                if leg == False:
-                                    self.rot_sim_spec_plot.axes.vlines(j_, 0, pop[v,1,j_], color=color, label='ν=' + str(v))
-                                    leg = True
-                                else:
-                                    self.rot_sim_spec_plot.axes.vlines(j_, 0, pop[v,1,j_], color=color)
-                            else:
-                                max_print_j = j_
-                                break
-
-                        self.rot_sim_spec_plot.axes.legend()
-
-                self.rot_sim_spec_plot.axes.set_xlabel("J")
-                self.rot_sim_spec_plot.axes.set_ylabel("Population")
-                self.rot_sim_spec_plot.axes.set_xticks(np.arange(0, max_print_j, 2))
-                self.rot_sim_spec_plot.draw()
+                    #TODO HEATMAP PLOT FOR v/j rovib shit
+                    self.rot_sim_spec_plot.axes.cla()
+                    self.rot_sim_spec_plot.axes.scatter(0, 0)
+                    self.rot_sim_spec_plot.draw()
+                
 
             elif self.rot_method == 'int':
 
@@ -3234,18 +3242,18 @@ class TabWidget(QTabWidget):
                 else:
                     CHARS = "0123456789ABCDEF"
 
-                    for j in range(inten.shape[0]):
+                    for v in range(inten.shape[2]):
                         leg = False
                         color = "#"
                         for k in range(6):
                             color += CHARS[np.random.randint(0, 15)]
-                        for v_ in range(inten.shape[2]):
-                            if abs(inten[j,1,v_]) > self.vib_cutoff:
+                        for j_ in range(inten.shape[0]):
+                            if abs(inten[j_,1,v]) > self.rot_cutoff:
                                 if leg == False:
-                                    self.rot_sim_spec_plot.axes.vlines(inten[j,0,v_], 0, abs(inten[j,1,v_]), color=color, label='J=' + str(j))
+                                    self.rot_sim_spec_plot.axes.vlines(inten[j_,0,v], 0, abs(inten[j_,1,v]), color=color, label='ν=' + str(v))
                                     leg = True
                                 else:
-                                    self.rot_sim_spec_plot.axes.vlines(inten[j,0,v_], 0, abs(inten[j,1,v_]), color=color)
+                                    self.rot_sim_spec_plot.axes.vlines(inten[j_,0,v], 0, abs(inten[j_,1,v]), color=color)
 
                     self.rot_sim_spec_plot.axes.legend()
 
@@ -3268,32 +3276,161 @@ class TabWidget(QTabWidget):
             v = int(self.rov_sim_spec_v_val.value())
             
             pop = sim.SimulatedRovibrationalPop(temp=self.temp,
-                                             J=J,
-                                             v=v,
-                                             vals=val,
-                                             )
-
-            self.rov_sim_spec_plot.axes.cla()
+                                                J=J,
+                                                v=v,
+                                                vals=val,
+                                                )
 
             if self.rov_method == 'pop':
+
+                self.rov_sim_spec_plot.axes.cla()
+
                 for en in range(pop.shape[1]):
                     if pop[1,en] > self.rov_cutoff:
                         self.rov_sim_spec_plot.axes.vlines(pop[0,en], 0, pop[1,en])
-                    else:
-                        break
+
+                    self.rov_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
+                    self.rov_sim_spec_plot.axes.set_ylabel("Population")
+                    self.rov_sim_spec_plot.draw()
+
+            elif self.rov_method == 'int':
+                val, vec = self.__diagonalize(self.total)
+
+                self.rov_sim_spec_plot.axes.cla()
+
+                inten = sim.SimulatedRovibrationalInt(vec=vec,
+                                                      pop=pop,
+                                                      tdm=self.tdm
+                                                      )
+                
+                for en in range(inten.shape[1]):
+                    if abs(inten[7,en]) > self.rov_cutoff:
+                        self.rov_sim_spec_plot.axes.vlines(inten[6,en], 0, abs(inten[7,en]))
 
                 self.rov_sim_spec_plot.axes.set_xlabel("Energy (cm$^{-1}$)")
-                self.rov_sim_spec_plot.axes.set_ylabel("Population")
+                self.rov_sim_spec_plot.axes.set_ylabel("Intensity (s$^{-1}$)")
                 self.rov_sim_spec_plot.draw()
 
+                
+
         except Exception as e:
-            print (str(traceback.format_exc()))
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
 
+    def __vib_spec_datatable(self):
+        try:
+            val, vec = self.__diagonalize(self.total)
+
+            sim = Spectra()
+
+            J = int(self.vib_sim_spec_j_val.value())
+            V = int(self.vib_sim_spec_v_val.value())
+
+            if J == -1:
+                method = 'rov'
+            else:
+                method = 'vib'
+
+            pop = sim.SimulatedVibrationalPop(temp=self.temp,
+                                           J=J,
+                                           v=V,
+                                           method=method,
+                                           vals=val,
+                                           )
+
+            inten = sim.SimulatedVibrationalInt(J=J,
+                                            v=V,
+                                            val=val,
+                                            vec=vec,
+                                            tdm=self.tdm,
+                                            pop=pop,
+                                            method=method)
+
+            self.c = VibSpecDataTable(pop=pop,
+                                      inten=inten,
+                                      v=V,
+                                      J=J, 
+                                      vib_type=self.vib_method,
+                                      method=method)
+            self.c.show()
+
+        except Exception as e:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
 
 
+    def __rot_spec_datatable(self):
+        try:
+            val, vec = self.__diagonalize(self.total)
+
+            sim = Spectra()
+
+            J = int(self.rot_sim_spec_j_val.value())
+            V = int(self.rot_sim_spec_v_val.value())
+
+            if V == -1:
+                method = 'rov'
+            else:
+                method = 'rot'
+
+            pop = sim.SimulatedRotationalPop(temp=self.temp,
+                                             J=J,
+                                             v=V,
+                                             method=method,
+                                             vals=val,
+                                             )
+
+            inten = sim.SimulatedRotationalInt(J=J,
+                                               v=V,
+                                               val=val,
+                                               vec=vec,
+                                               tdm=self.tdm,
+                                               pop=pop,
+                                               method=method)
+
+            self.c = RotSpecDataTable(pop=pop,
+                                      inten=inten,
+                                      v=V,
+                                      J=J,
+                                      rot_type=self.rot_method,
+                                      method=method)
+            self.c.show()
+
+        except Exception as e:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
+
+    def __rov_spec_datatable(self):
+        try:
+            val, vec = self.__diagonalize(self.total)
+
+            sim = Spectra()
+
+            J = int(self.rov_sim_spec_j_val.value())
+            V = int(self.rov_sim_spec_v_val.value())
+
+            pop = sim.SimulatedRovibrationalPop(temp=self.temp,
+                                                J=J,
+                                                v=V,
+                                                vals=val,
+                                                )
+
+            inten = sim.SimulatedRovibrationalInt(vec=vec,
+                                                  pop=pop,
+                                                  tdm=self.tdm
+                                                  )
+
+            self.c = RovSpecDataTable(pop=pop,
+                                      inten=inten,
+                                      v=V,
+                                      J=J,
+                                      rov_type=self.rov_method)
+            self.c.show()
+
+        except Exception as e:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
 
 
 
@@ -3401,6 +3538,12 @@ class CoefficientWindow(QWidget):
         vlayout = QVBoxLayout(self)
         vlayout.addWidget(self.table)
 
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
     def eventFilter(self, source, event):
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
@@ -3433,7 +3576,7 @@ class InterpolationErrorWindow(QWidget):
         self.error = error
         self.val = val
 
-        self.resize(400, 400)
+        self.resize(800, 400)
 
         if val == 'energy':
             self.setWindowTitle("Error of Energy Interpolation")
@@ -3458,6 +3601,12 @@ class InterpolationErrorWindow(QWidget):
         self.table.setModel(self.model)
         vlayout = QVBoxLayout(self)
         vlayout.addWidget(self.table)
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
 
     def eventFilter(self, source, event):
         if (event.type() == QEvent.KeyPress and
@@ -3504,6 +3653,12 @@ class StabilityWindow(QWidget):
         self.layout.addWidget(self.label)
         self.setLayout(self.layout)
 
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
 class MatrixWindow(QWidget):
 
     def __init__(self, *args, **kwargs):
@@ -3511,6 +3666,8 @@ class MatrixWindow(QWidget):
 
         self.matrix = kwargs['matrix']
         self.val    = kwargs['val']
+
+        self.resize(1000,1000)
     
         if 'J' in kwargs:
             if kwargs['J'] != 0:
@@ -3552,6 +3709,12 @@ class MatrixWindow(QWidget):
             vlayout = QVBoxLayout(self)
             vlayout.addWidget(self.table)
             self.show()
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
 
     def eventFilter(self, source, event):
         if (event.type() == QEvent.KeyPress and
@@ -3603,6 +3766,12 @@ class MatrixWindow_AskJ(QWidget):
 
             self.setLayout(self.layout)
 
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
     def __newJval(self):
         self.J = int(self.box.currentText())
         self.c = MatrixWindow(matrix=self.matrix[self.J],val=self.val + "(J=" + str(self.J) + ")")
@@ -3613,6 +3782,8 @@ class TruncationWindowValues(QWidget):
 
     def __init__(self, vals):
         super(TruncationWindowValues, self).__init__()
+
+        self.resize(600,600)
 
         self.vals = vals
 
@@ -3628,6 +3799,12 @@ class TruncationWindowValues(QWidget):
         self.table.setModel(self.model)
         vlayout = QVBoxLayout(self)
         vlayout.addWidget(self.table)
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
 
 
 class TruncationWindow(QWidget):
@@ -3673,6 +3850,12 @@ class TruncationWindow(QWidget):
 
         self.show()
 
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
     def __view_truncation(self):
         self.c = TruncationWindowValues(self.vals)
         self.c.show()
@@ -3692,23 +3875,314 @@ class SaveWindow(QWidget):
         self.setLayout(self.layout)
         self.show()
 
-class TurningPointWindow(QWidget):
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
 
-    def __init__(self, tps):
-        super().__init__()
+    def __exit_program(self):
+        self.close()
 
-        self.tps = tps
 
-        self.df = pd.DataFrame({"Number" : np.arange(self.tps.shape[1]),
-                                "Left"   : self.tps[0], 
-                                "Right"  : self.tps[1]
-                                })
+class VibSpecDataTable(QWidget):
+        
+    def __init__(self, *args, **kwargs):
+        super(VibSpecDataTable, self).__init__()
+
+        self.resize(600,600)
+
+        v   = kwargs['v']
+        j   = kwargs['J']
+
+        self.df = pd.DataFrame()
+
+        if kwargs['method'] == 'rov':
+            if kwargs['vib_type'] == 'pop':
+                pop = kwargs['pop']
+                p_size = int(pop.size/2)
+
+                temp_arr_v = np.zeros((p_size))
+                temp_arr_j = np.zeros((p_size))
+                temp_arr_e = np.zeros((p_size))
+                temp_arr_p = np.zeros((p_size))
+                c = 0
+                for jj in range(pop.shape[0]):
+                    for vv in range(pop.shape[2]):
+                        temp_arr_v[c] = vv
+                        temp_arr_j[c] = jj
+                        temp_arr_e[c] = pop[jj,0,vv]
+                        temp_arr_p[c] = pop[jj,1,vv]
+                        c += 1
+
+                self.df['v'] = np.asarray(temp_arr_v, dtype=int)
+                self.df['J'] = np.asarray(temp_arr_j, dtype=int)
+                self.df['Energy (cm^-1)'] = temp_arr_e
+                self.df['Population'] = temp_arr_p
+
+            elif kwargs['vib_type'] == 'int':
+                inten = kwargs['inten']
+                i_size = int(inten.size/4)
+
+                temp_arr_v  = np.zeros((i_size))
+                temp_arr_vv = np.zeros((i_size))
+                temp_arr_j  = np.zeros((i_size))
+                temp_arr_e  = np.zeros((i_size))
+                temp_arr_i  = np.zeros((i_size))
+                c = 0
+                for jj in range(inten.shape[0]):
+                    cc = 0
+                    for vv_ in range(inten.shape[2]):
+                        temp_arr_v[c]  = inten[jj,2,cc] 
+                        temp_arr_vv[c] = inten[jj,3,cc]
+                        temp_arr_j[c]  = jj
+                        temp_arr_e[c]  = inten[jj,0,cc]
+                        temp_arr_i[c]  = inten[jj,1,cc]
+                        c+=1
+                        cc+=1
+
+                self.df['v initial'] = np.asarray(temp_arr_v, dtype=int)
+                self.df['v final'] = np.asarray(temp_arr_vv, dtype=int)
+                self.df['J'] = np.asarray(temp_arr_j, dtype=int)
+                self.df['Energy (cm^-1)'] = temp_arr_e
+                self.df['Intensity (s^-1)'] = temp_arr_i
+
+
+        elif kwargs['method'] == 'vib':
+            if kwargs['vib_type'] == 'pop':
+                self.df['v'] = np.arange(0, v)
+                self.df['J'] = np.ones((v), dtype=int)*j
+                self.df['Energy (cm^-1)'] = kwargs['pop'][0]
+                self.df['Population'] = kwargs['pop'][1]
+
+            elif kwargs['vib_type'] == 'int':
+                self.df['v initial'] = np.asarray(kwargs['inten'][2], dtype=int)
+                self.df['v final']   = np.asarray(kwargs['inten'][3], dtype=int)
+                self.df['J'] = np.ones((kwargs['inten'][0].size), dtype=int)*j
+                self.df['Energy (cm^-1)'] = kwargs['inten'][0]
+                self.df['Intensity (s^-1)'] = kwargs['inten'][1]
+
+        self.df = self.df[self.df['Energy (cm^-1)'] != 0]
 
         self.table = QTableView()
+        self.table.installEventFilter(self)
         self.model = PandasModel(self.df, edit=False)
         self.table.setModel(self.model)
         vlayout = QVBoxLayout(self)
         vlayout.addWidget(self.table)
+        self.show()
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
+    def eventFilter(self, source, event):
+        if (event.type() == QEvent.KeyPress and
+            event.matches(QKeySequence.Copy)):
+            self.copySelection()
+            return True
+        return super(VibSpecDataTable, self).eventFilter(source, event)
+        
+    def copySelection(self):
+        selection = self.table.selectedIndexes()
+        if selection:
+            rows = sorted(index.row() for index in selection)
+            columns = sorted(index.column() for index in selection)
+            rowcount = rows[-1] - rows[0] + 1
+            colcount = columns[-1] - columns[0] + 1
+            table = [[''] * colcount for _ in range(rowcount)]
+            for index in selection:
+                row = index.row() - rows[0]
+                column = index.column() - columns[0]
+                table[row][column] = index.data()
+            stream = io.StringIO()
+            csv.writer(stream).writerows(table)
+            qApp.clipboard().setText(stream.getvalue())
+
+
+class RotSpecDataTable(QWidget):
+
+    def __init__(self, *args, **kwargs):
+        super(RotSpecDataTable, self).__init__()
+        v   = kwargs['v']
+        J   = kwargs['J']
+
+        self.resize(600,600)
+        
+        self.df = pd.DataFrame()
+
+        if kwargs['method'] == 'rov':
+            if kwargs['rot_type'] == 'pop':
+                pop = kwargs['pop']
+                p_size = int(pop.size/2)
+
+                temp_arr_v = np.zeros((p_size))
+                temp_arr_j = np.zeros((p_size))
+                temp_arr_e = np.zeros((p_size))
+                temp_arr_p = np.zeros((p_size))
+                c = 0
+                for vv in range(pop.shape[0]):
+                    for jj in range(pop.shape[2]):
+                        temp_arr_v[c] = vv
+                        temp_arr_j[c] = jj
+                        temp_arr_e[c] = pop[vv,0,jj]
+                        temp_arr_p[c] = pop[vv,1,jj]
+                        c += 1
+
+                self.df['v'] = np.asarray(temp_arr_v, dtype=int)
+                self.df['J'] = np.asarray(temp_arr_j, dtype=int)
+                self.df['Energy (cm^-1)'] = temp_arr_e
+                self.df['Population'] = temp_arr_p
+
+            elif kwargs['rot_type'] == 'int':
+                inten = kwargs['inten']
+                i_size = int(inten.size/4)
+
+                temp_arr_j  = np.zeros((i_size))
+                temp_arr_jj = np.zeros((i_size))
+                temp_arr_v  = np.zeros((i_size))
+                temp_arr_e  = np.zeros((i_size))
+                temp_arr_i  = np.zeros((i_size))
+                c = 0
+                for vv in range(inten.shape[0]):
+                    cc = 0
+                    for jj_ in range(inten.shape[2]):
+                        temp_arr_j[c]  = inten[vv,2,cc]
+                        temp_arr_jj[c] = inten[vv,3,cc]
+                        temp_arr_v[c]  = vv
+                        temp_arr_e[c]  = inten[vv,0,cc]
+                        temp_arr_i[c]  = inten[vv,1,cc]
+                        c+=1
+                        cc+=1
+
+                self.df['J initial'] = np.asarray(temp_arr_j, dtype=int)
+                self.df['J final'] = np.asarray(temp_arr_jj, dtype=int)
+                self.df['v'] = np.asarray(temp_arr_v, dtype=int)
+                self.df['Energy (cm^-1)'] = temp_arr_e
+                self.df['Intensity (s^-1)'] = temp_arr_i
+
+
+        elif kwargs['method'] == 'rot':
+            if kwargs['rot_type'] == 'pop':
+                pop = kwargs['pop']
+                self.df['J'] = np.arange(0, J)
+                self.df['v'] = np.ones((J), dtype=int)*v
+                self.df['Energy (cm^-1)'] = kwargs['pop'][0]
+                self.df['Population'] = kwargs['pop'][1]
+
+            elif kwargs['rot_type'] == 'int':
+                self.df['J initial'] = np.asarray(kwargs['inten'][2], dtype=int)
+                self.df['J final']   = np.asarray(kwargs['inten'][3], dtype=int)
+                self.df['v'] = np.ones((kwargs['inten'][0].size), dtype=int)*v
+                self.df['Energy (cm^-1)'] = kwargs['inten'][0]
+                self.df['Intensity (s^-1)'] = kwargs['inten'][1]
+
+        self.df = self.df[self.df['Energy (cm^-1)'] != 0]
+        
+        self.table = QTableView()
+        self.table.installEventFilter(self)
+        self.model = PandasModel(self.df, edit=False)
+        self.table.setModel(self.model)
+        vlayout = QVBoxLayout(self)
+        vlayout.addWidget(self.table)
+        self.show()
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
+    def eventFilter(self, source, event):
+        if (event.type() == QEvent.KeyPress and
+            event.matches(QKeySequence.Copy)):
+            self.copySelection()
+            return True
+        return super(RotSpecDataTable, self).eventFilter(source, event)
+
+    def copySelection(self):
+        selection = self.table.selectedIndexes()
+        if selection:
+            rows = sorted(index.row() for index in selection)
+            columns = sorted(index.column() for index in selection)
+            rowcount = rows[-1] - rows[0] + 1
+            colcount = columns[-1] - columns[0] + 1
+            table = [[''] * colcount for _ in range(rowcount)]
+            for index in selection:
+                row = index.row() - rows[0]
+                column = index.column() - columns[0]
+                table[row][column] = index.data()
+            stream = io.StringIO()
+            csv.writer(stream).writerows(table)
+            qApp.clipboard().setText(stream.getvalue())
+
+class RovSpecDataTable(QWidget):
+
+    def __init__(self, *args, **kwargs):
+        super(RovSpecDataTable, self).__init__()
+        v   = kwargs['v']
+        J   = kwargs['J']
+
+        self.resize(600,600)
+
+        self.df = pd.DataFrame()
+
+        if kwargs['rov_type'] == 'pop':
+            pop = kwargs['pop']
+            self.df['v'] = np.asarray(pop[3], dtype=int)
+            self.df['J'] = np.asarray(pop[2], dtype=int)
+            self.df['Energy (cm^-1)'] = pop[0]
+            self.df['Population'] = pop[1]
+
+        elif kwargs['rov_type'] == 'int':
+            inten = kwargs['inten']
+
+            self.df['v initial'] = np.asarray(inten[0], dtype=int)
+            self.df['J initial'] = np.asarray(inten[1], dtype=int)
+            self.df['v final'] = np.asarray(inten[2], dtype=int)
+            self.df['J final'] = np.asarray(inten[3], dtype=int)
+            self.df['E initial'] = inten[4]
+            self.df['E final'] = inten[5]
+            self.df['Energy (cm^-1)'] = inten[6]
+            self.df['Intensity (s^-1)'] = inten[7]
+
+        self.table = QTableView()
+        self.table.installEventFilter(self)
+        self.model = PandasModel(self.df, edit=False)
+        self.table.setModel(self.model)
+        vlayout = QVBoxLayout(self)
+        vlayout.addWidget(self.table)
+        self.show()
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+
+    def __exit_program(self):
+        self.close()
+
+    def eventFilter(self, source, event):
+        if (event.type() == QEvent.KeyPress and
+            event.matches(QKeySequence.Copy)):
+            self.copySelection()
+            return True
+        return super(RovSpecDataTable, self).eventFilter(source, event)
+
+    def copySelection(self):
+        selection = self.table.selectedIndexes()
+        if selection:
+            rows = sorted(index.row() for index in selection)
+            columns = sorted(index.column() for index in selection)
+            rowcount = rows[-1] - rows[0] + 1
+            colcount = columns[-1] - columns[0] + 1
+            table = [[''] * colcount for _ in range(rowcount)]
+            for index in selection:
+                row = index.row() - rows[0]
+                column = index.column() - columns[0]
+                table[row][column] = index.data()
+            stream = io.StringIO()
+            csv.writer(stream).writerows(table)
+            qApp.clipboard().setText(stream.getvalue())
+
+
 
 class ErrorWindow(QWidget):
 
@@ -3722,6 +4196,11 @@ class ErrorWindow(QWidget):
         self.label = QLabel(self.txt)
         layout.addWidget(self.label)
         self.setLayout(layout)
+
+        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self.exit_shortcut.activated.connect(self.__exit_program)
+    def __exit_program(self):
+        self.close()
 
 class TabBar(QTabBar):
     def tabSizeHint(self, index):
