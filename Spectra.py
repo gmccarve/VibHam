@@ -391,7 +391,7 @@ class Spectra():
             for vv in range(vals.size):
                 en = vals[vv]
                 pop[0,vv] = en
-                pop[1,vv] = np.exp(-1 * (en / J_cm) / (kb * temp))
+                pop[1,vv] = (2*J+1) * np.exp(-1 * (en / J_cm) / (kb * temp))
 
             pop[1] /= np.sum(pop[1])
 
@@ -400,9 +400,9 @@ class Spectra():
             for j in range(vals.shape[0]):
                 for vv in range(v):
                     pop[j,0,vv] = vals[j,vv]
-                    pop[j,1,vv] = np.exp(-1 * (vals[j,vv] / J_cm) / (kb * temp))
+                    pop[j,1,vv] = (2*j+1) * np.exp(-1 * (vals[j,vv] / J_cm) / (kb * temp))
 
-                pop[j,1] /= np.sum(pop[j,1])
+            pop[:,1] /= np.sum(pop[:,1])
 
         return pop
 
@@ -539,13 +539,13 @@ class Spectra():
         elif method == 'rov':
             if J == 0:
                 return np.zeros((1,2,1))
-            pop = np.zeros((vals.shape[0], 2, vals.shape[1]))
-            for j in range(vals.shape[0]):
+            pop = np.zeros((J, 2, vals.shape[1]))
+            for j in range(J): 
                 for vv in range(vals.shape[1]):
                     pop[j,0,vv] = vals[j,vv]
                     pop[j,1,vv] = (2 * j + 1) * np.exp(-1 * (vals[j,vv] / J_cm) / (kb * temp))
 
-                pop[j,1] /= np.sum(pop[j,1])
+            pop[:,1] /= np.sum(pop[:,1])
 
         return pop
 
