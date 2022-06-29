@@ -9,6 +9,19 @@ from math import factorial as fac
 from Conversions import *
 
 class Hamil():
+    '''Class used to contain all functions used to construct the Hamiltonian Matrices
+
+        Functions:
+            __Norm                  - Calculate normalization constants
+            __Hermite               - Calculate Hermite Polynomials
+            __Harmonic              - Populate the Harmonic Hamiltonian matrix
+            __AnHarmonic            - Populate the Anharmonic Hamiltonian matrix
+            __Centrifugal           - Populate the Centrifugal potential Hamiltonian matrix
+            __DipoleMomentMatrix    - Populate the transition dipole moment matrix
+
+        Returns the desired matrix
+
+    '''
 
     def __init__(self, *args, **kwargs):
 
@@ -22,28 +35,39 @@ class Hamil():
             self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
 
     def __Norm(self, v_):
+        ''' Function to calculate the normalization constant for a harmonic oscillator wave fucntion of order v
 
-        #####################################################
-        #   Function to calculate the normalization constant
-        #       for a harmonic oscillator wave fucntion of 
-        #       order v
-        #####################################################
-        
+            Variables:
+                v_          - Vibrational quantum number
+                self.beta   - Beta value for the diatomic molecule
+
+            Returns:
+                Normalization value
+
+        '''
+
         return (1 / np.pi**0.25) * np.sqrt(self.beta / (2**v_ * math.factorial(v_)))
 
     def __Hermite(self, x):
+        ''' Function used to calculate a Hermite polynomial of arbitrary order. 
 
-        ###################################################
-        # __Hermite Polynomials of Arbitrary Order 
-        #   stored in an array where the index corresponds 
-        #   to the exponent and the value corresponds to
-        #   the coefficient
-        # Examples:
-        #   H0(x) =  1                      --> [1]
-        #   H1(x) =  0 + 2x                 --> [ 0, 2]
-        #   H2(x) = -2 +  0x + 4x^2         --> [-2, 0, 4]
-        #   H3(x) =  0 - 12x + 0x^2 + 8x^3  --> [ 0,-12, 0, 8]
-        ###################################################
+            Variables:
+                x     - Order of the Hermite polynomial
+                Hn_1  - Array of the next lowest Hermite polynomial
+                Hn    - Array of the current Hermite polynomial
+                H_np1 - Array of the next highest Hermite polynomial
+            
+            Returns:
+                An array where the index and value correspond to the exponent and the 
+                coefficient, respectively. 
+
+            Examples:
+                H0(x) =  1                      --> [1]
+                H1(x) =  0 + 2x                 --> [ 0, 2]
+                H2(x) = -2 +  0x + 4x^2         --> [-2, 0, 4]
+                H3(x) =  0 - 12x + 0x^2 + 8x^3  --> [ 0,-12, 0, 8]
+
+        '''
 
         if x == 0:
             return np.array((1))
@@ -61,115 +85,140 @@ class Hamil():
             H_np1 -= 2*j * np.append(Hn_1, np.zeros((2)))
         return H_np1
 
+
     def __Harmonic(self, *args, **kwargs):
+        '''Function used to populate the Harmonic portion of a Hamiltonian matrix
 
-        ##########################################################
-        # Populate the harmonic Hamiltonian matrix up to size V
-        #
-        # Variables:
-        #   V       - Hamiltonian matrix dimension
-        #   h_bar   - reduced planck constant
-        #   omega   - vibrational constant (s^-1)
-        # Returns:
-        #   H       - Harmonic Hamiltonian Matrix
-        ##########################################################
+            Variables:
+                self.maxV - Hamiltonian matrix dimension
+                self.nu   - Harmonic frequency (s^-1)
+                h_bar     - Reduced Planck constant
 
+            Returns:
+                H - The harmonic Hamiltonain Matrix
+        '''
+                
         self.maxV = kwargs['maxv']
         self.nu = kwargs['nu']
 
-        H = np.zeros((self.maxV, self.maxV))                  # Empty Hamiltonian matrix of size MaxV by MaxV
-        for n in range(self.maxV):                                    # For loop over all v-values
-            H[n,n] = (n * 2 + 1) * h_bar * self.nu * 0.5      # Assign value to Hamiltonian matrix 
-        return H                                              # Return Matrix
+        H = np.zeros((self.maxV, self.maxV))                  
+        for n in range(self.maxV):                           
+            H[n,n] = (n * 2 + 1) * h_bar * self.nu * 0.5     
+        return H                                           
+
 
     def __AnHarmonic(self, *args, **kwargs):
+        '''Function used to populate the Anharmonic Hamiltonian matrix.
+            These integrals are calculated analytically. 
 
-        #################################################################
-        # Populate the Anharmonic Matrix up to size MaxV
-        #
-        # These integrals are calculated analytically 
-        #   
-        # The matrix is truncated to a size where all diagonal elements
-        #   are ever increasing
-        #
-        # Variables:
-        #   H           - Hamiltonian Matrix
-        #   H_temp      - temporary Hamiltonian Matrix
-        #   EXP         - Order of power series expansion coefficient
-        #   C           - Power series expansion coefficient
-        #   N_i         - __Normalization consant for bra 
-        #   N_j         - __Normalization consant for ket
-        #   H_i         - __Hermite polynomial array for bra
-        #   H_j         - __Hermite polynomial array for ket
-        #   Hi          - __Hermite polynomial coefficient for bra
-        #   Hj          - __Hermite polynomial coefficient for ket
-        #   inte        - running value of integral
-        #   TotExp      - Total exponent given __Hermite polynomials of bra, ket, and power series expansion
-        #   Hval        - Total value of bra and ket __Hermite polynomial coefficients
-        #   Bval        - Value to account for powers of beta^n
-        #   Fval        - Value of factorials given analtical solution to integral
-        #
-        # Returns:
-        #   H - Hamiltonian Matrix
-        #################################################################
+            Variables:
+                self.maxV   - Hamiltonian matrix dimension
+                self.Ecoef  - Array of power series expansion coefficients
+                self.beta   - Beta value for the diatomic molecule
+                H           - Hamiltonian Matrix
+                H_temp      - temporary Hamiltonian Matrix
+                EXP         - Order of power series expansion coefficient
+                C           - Power series expansion coefficient
+                N_i         - __Normalization consant for bra
+                N_j         - __Normalization consant for ket
+                H_i         - __Hermite polynomial array for bra
+                H_j         - __Hermite polynomial array for ket
+                Hi          - __Hermite polynomial coefficient for bra
+                Hj          - __Hermite polynomial coefficient for ket
+                inte        - running value of integral
+                TotExp      - Total exponent given __Hermite polynomials of bra, ket, and power series expansion
+                Hval        - Total value of bra and ket __Hermite polynomial coefficients
+                Bval        - Value to account for powers of beta^n
+                Fval        - Value of factorials given analtical solution to integral
 
+            Returns:
+                H - The anharmonic Hamiltonian matrix
+        '''
+        
         self.maxV  = kwargs['maxV']
         self.Ecoef = kwargs['coef']
         self.beta  = kwargs['beta']
 
-        H = np.zeros((self.maxV, self.maxV))              # Empty Hamiltonian matrix of size MaxV by MaxV
+        H = np.zeros((self.maxV, self.maxV))              
 
-        for n in range(1, len(self.Ecoef)):         # For loop over all power series expansion coefficients
-            H_temp = np.zeros((self.maxV, self.maxV))     # Temporary Hamiltonian array
-            EXP = n + 2                         # Order of power series expansion coefficient
-            C = self.Ecoef[n] * ang_m**EXP          # Power series expansion coefficient
+        for n in range(1, len(self.Ecoef)):         
+            H_temp = np.zeros((self.maxV, self.maxV))
+            EXP = n + 2                         
+            C = self.Ecoef[n] * ang_m**EXP          
 
-            for v in range(self.maxV):               # For loop over all v-values for bra
-                N_i = self.__Norm(v)                   # Normalization consant for bra 
-                H_i = self.__Hermite(v)                # Hermite polynomial array for bra
+            for v in range(self.maxV):               
+                N_i = self.__Norm(v)                  
+                H_i = self.__Hermite(v)              
 
-                for vv in range(v, self.maxV):       # For loop over all v-values for ket
-                    N_j = self.__Norm(vv)              # Normalization consant for ket
-                    H_j = self.__Hermite(vv)           # Hermite polynomial array for ket
+                for vv in range(v, self.maxV):       
+                    N_j = self.__Norm(vv)            
+                    H_j = self.__Hermite(vv)         
 
-                    inte = 0                    # Begin integration at a value of 0.0
+                    inte = 0                    
 
-                    for i in range(H_i.size):       # Loop over all __Hermite polynomial array values for bra
-                        if H_i.size == 1:           # If __Hermite polynomial is equal to 1
-                            Hi = H_i                # set value to array value (necessary for arrays of length 1)
+                    for i in range(H_i.size):       
+                        if H_i.size == 1:           
+                            Hi = H_i                
                         else:           
                             Hi = H_i[i]             
-                        if Hi != 0:                     # If hermite polynomial array value is not zero
-                            for j in range(H_j.size):   # Loop over all __Hermite polynomial array values for ket
-                                if H_j.size == 1:       # Same as above for ket    
+                        if Hi != 0:                     
+                            for j in range(H_j.size):   
+                                if H_j.size == 1:           
                                     Hj = H_j
                                 else:
                                     Hj = H_j[j]
                                 if Hj != 0:
-                                    TotExp = i + j + EXP        # Total exponent given __Hermite polynomials of bra, ket, and power series expansion
+                                    TotExp = i + j + EXP
 
-                                    if (TotExp % 2) == 0:                                           # Integral goes to 0 for odd values of TotExp
-                                        Hval = float(Hi * Hj)                                       # Total value of bra and ket __Hermite polynomial coefficients
-                                        Bval = (1. / self.beta**(EXP + 1))                               # Value to account for powers of beta^n
-                                        Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2)))       # Value of factorials given analtical solution to integral
-                                        inte += Hval * Bval * Fval * np.sqrt(np.pi)                 # Add values to running integral value
+                                    if (TotExp % 2) == 0:                                           # Integral goes to 0 for odd functions
+                                        Hval = float(Hi * Hj)                                       # Total Hermite portion
+                                        Bval = (1. / self.beta**(EXP + 1))                          # Total beta portion
+                                        Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2)))       # Total factorial portion
+                                        inte += Hval * Bval * Fval * np.sqrt(np.pi)                 
 
-                    H_temp[v, vv] = inte * N_i * N_j * C        # Assign integral value to entry in Hamiltonian Array
+                    H_temp[v, vv] = inte * N_i * N_j * C        
                     H_temp[vv, v] = inte * N_i * N_j * C        # Hamiltonian array is symmetric so match across the diagonal
 
-            H += H_temp     # Add temporary Hamiltonian matrix to total anharmonic matrix
+            H += H_temp
 
         return H
 
-    def __Centrifugal(self, *args, **kwargs):
 
-        #################################################################
-        # Populate the centrifugal potential barrier Hamiltonian Matrix 
-        #   up to size MaxV
-        #
-        # These integrals are calculated numerically using the trapezoid
-        #   rule
-        #################################################################
+    def __Centrifugal(self, *args, **kwargs):
+        '''Function used to populate the centrifugal potential Hamiltonian Matrix.
+            These integrals are solved numerically using the trapezoid rule
+
+            Variables:
+                Trap                - Number of intervals used for trapezoid rule
+                self.maxJ           - Maximum rotational quantum number
+                slef.maxV           - Maximum vibrational quantum number
+                self.rEq            - Equilibrium bond distance
+                self.beta           - Beta value for the diatomic molecule
+                self.reduced_mass   - Reduced mass for the diatomic molecule
+                old_mat             - Old centrifugal matrix to be read in
+                J_Factor            - J(J+1) factor 
+                H                   - Hamiltonian Matrix
+                H_temp              - temporary Hamiltonian Matrix
+                N_i                 - Normalization consant for bra
+                N_j                 - Normalization consant for ket
+                H_i                 - Hermite polynomial array for bra
+                H_j                 - Hermite polynomial array for ket
+                Hi                  - Hermite polynomial coefficient for bra
+                Hj                  - Hermite polynomial coefficient for ket
+                L                   - Left limit of integration
+                R                   - Right limit of integraion
+                x                   - Arrary of distance values used for integration
+                hh                  - # Initial value for polynomial portion of the integral
+                y1                  - Array for exponential values for integration
+                y2                  - Array for 1/R^2 values for integration
+                y3                  - Array for the polynomial portion of the integral
+                y                   - Array for entire wave function
+                inte                - running value of integral
+
+            Returns:
+                H - Centrifugal potential Hamiltonian tensor
+        
+        '''
 
         Trap    = kwargs['Trap']
 
@@ -180,187 +229,195 @@ class Hamil():
         self.reduced_mass = kwargs['reduced_mass']
 
         try:
-            old_mat = kwargs['cent'][1] / 2.
+            old_mat = kwargs['cent'][1] / 2.                            # If matrix has already been constructed, read in
+
         except:
             old_mat = np.zeros((self.maxJ, self.maxV, self.maxV))
 
 
-        if np.sum(old_mat) != 0 and old_mat.shape[1] == self.maxV:
+        if np.sum(old_mat) != 0 and old_mat.shape[1] == self.maxV:      # Construct the tensor using the already computed matrix
             H = np.zeros((self.maxJ+1, self.maxV, self.maxV))
+            
             for J in range(0, self.maxJ+1):
                 J_Factor = J * (J+1)
                 H[J] = old_mat * J_Factor
+            
             return H
 
         else:
-            H_temp = np.zeros((self.maxV, self.maxV))           # Emptry Hamiltonian array
+            H_temp = np.zeros((self.maxV, self.maxV))
 
-            for v in range(self.maxV):                  # For loop over all v-values for bra
-                N_i  = self.__Norm(v)                   # Normalization constant for bra
-                H_ii = self.__Hermite(v)               # Hermite Polynomial for bra
+            for v in range(self.maxV):               
+                N_i  = self.__Norm(v)                
+                H_i = self.__Hermite(v)             
 
-                for vv in range(v, self.maxV):          # For loop over all v-values for ket
-                    N_j  = self.__Norm(vv)              # Normalization constant for ket
-                    H_jj = self.__Hermite(vv)          # Hermite Polynomial for ket
+                for vv in range(v, self.maxV):       
+                    N_j  = self.__Norm(vv)           
+                    H_j = self.__Hermite(vv)          
 
-                    L = -0.9*self.rEq               # Left limit of integration 
-                    R = -L                      # Right limit of integration
+                    L = -0.9*self.rEq           
+                    R = -L                      
 
-                    x = np.linspace(L, R, Trap)        # Array for integration values
+                    x = np.linspace(L, R, Trap) 
 
-                    hh = 0.                     # Initial value for polynomial portion of the integral
+                    hh = 0.                     
 
-                    for i in range(H_ii.size):  # Loop over __Hermite polynomial for bra
-                        if H_ii.size == 1:
-                            Hi = H_ii
+                    for i in range(H_i.size):  
+                        if H_i.size == 1:
+                            Hi = H_i
                         else:
-                            Hi = H_ii[i]
+                            Hi = H_i[i]
                         if Hi != 0:
-                            for j in range(H_jj.size):  # Loop over __Hermite polynomial for ket
-                                if H_jj.size == 1:
-                                    Hj = H_jj
+                            for j in range(H_j.size):  
+                                if H_j.size == 1:
+                                    Hj = H_j
                                 else:
-                                    Hj = H_jj[j]
+                                    Hj = H_j[j]
                                 if Hj != 0:
                                     hh += Hi * Hj * (self.beta*x)**(i + j)
 
-                    y1 = np.exp(-(self.beta*x)**2)           # Array for exponential values for integration
-                    y2 = (x + self.rEq)**2                  # Array for 1/R^2 values for integration
-                    y3 = hh                             # Array for the polynomial portion of the integral
+                    y1 = np.exp(-(self.beta*x)**2)
+                    y2 = (x + self.rEq)**2                  
+                    y3 = hh                             
 
-                    y = y1 / y2 * y3                    # Arrary for entire wave function
+                    y = (y1 / y2) * y3  
 
                     inte = 0.
                     for j in range(1, Trap):       # Use trapezoid rule to numerically evaluate the integral. Grid controlled by args.Trap
                         inte += (x[j] - x[j-1]) * 0.5 * (y[j-1] + y[j])
 
-                    H_temp[v,vv] = inte*N_i*N_j         # Assign integral values to temporary Hamiltonian
-                    H_temp[vv,v] = inte*N_i*N_j         # Assign integral values to temporary Hamiltonian
+                    H_temp[v,vv] = inte*N_i*N_j
+                    H_temp[vv,v] = inte*N_i*N_j
 
 
             H = np.zeros((self.maxJ+1, self.maxV, self.maxV))
+            
             for J in range(0, self.maxJ+1):                # Introduce the J(J+1) prefactor for all J values to create Hamiltonian tensor
                 J_Factor = (((0.5 * h_bar**2 * J * (J+1)) / (ang_m**2 * self.reduced_mass)))
                 H[J] = H_temp * J_Factor
+            
             return H
 
     def __DipoleMomentMatrix(self, *args, **kwargs):
+        '''Function used to populate the transition dipole moment matrix.
+            
+            These integrals are calculated analytically in the same as the 
+                anharmonic Hamiltonian matrix.
 
-        def TransformD(D, R, args):
+            Variables:
+                self.maxV           - Maximum vibrational quantum number
+                self.Dcoef          - Coefficients for the power series expansion
+                self.beta           - Beta value for the diatomic molecule
+                H                   - Transition dipole moment Hamiltonian Matrix
+                H_temp              - temporary Hamiltonian Matrix
+                EXP                 - Order of power series expansion coefficient
+                C                   - Power series expansion coefficient
+                N_i                 - Normalization consant for bra
+                N_j                 - Normalization consant for ket
+                H_i                 - Hermite polynomial array for bra
+                H_j                 - Hermite polynomial array for ket
+                Hi                  - Hermite polynomial coefficient for bra
+                Hj                  - Hermite polynomial coefficient for ket
+                inte                - running value of integral
+                TotExp              - Total exponent given __Hermite polynomials of bra, ket, and power series expansion
+                Hval                - Total value of bra and ket __Hermite polynomial coefficients
+                Bval                - Value to account for powers of beta^n
+                Fval                - Value of factorials given analtical solution to integral
 
-            #TODO transform the dipole moment for charged isotopes
-
-            #####################################################################
-            # This function transforms the dipole moment array if a non-standard
-            #   isotoped is provided and the diatomic molecule is charged
-            #
-            # Variables:
-            #   D       - Array of dipole moment values
-            #   R       - Array of bond distance values
-            #   args    - Input arguments
-            #
-            # Returns
-            #   D       - Transformed Dipole array
-            #
-            #####################################################################
-
-            Atom1_s = Atoms(args.Atoms[0], 0)
-            Atom2_s = Atoms(args.Atoms[1], 0)
-
-            Atom1_n = Atoms(args.Atoms[0], args.Isotopes[0])
-            Atom2_n = Atoms(args.Atoms[1], args.Isotopes[1])
-
-            if Atom1_s == Atom1_n:
-                Old_ratio = Atom2_s / (Atom1_s + Atom2_s)
-                New_ratio = Atom2_n / (Atom1_n + Atom2_n)
-
-                if args.Charge < 0:
-                    D -= (R / bohr_m) * (Old_ratio - New_ratio)
-                else:
-                    D += (R / bohr_m) * (Old_ratio - New_ratio)
-
-            elif Atom2_s == Atom2_n:
-                Old_ratio = Atom1_s / (Atom1_s + Atom2_s)
-                New_ratio = Atom1_n / (Atom1_n + Atom2_n)
-
-                if args.Charge < 0:
-                    D -= (R / bohr_m) * (Old_ratio - New_ratio)
-                else:
-                    D += (R / bohr_m) * (Old_ratio - New_ratio)
-
-            else:
-                exit()
-
-            return D
-
-
-        #################################################################
-        # This function is used to construct the transition dipole moment
-        #   matrix of size MaxV by MaxV
-        #
-        # These integrals are solved analytically
-        #
-        ##################################################################
+            Returns:
+                H - Transition Dipole Moment Matrix
+        '''
 
         self.maxV  = kwargs['maxV']
         self.Dcoef = kwargs['coef']
         self.beta  = kwargs['beta']
 
-        D = np.zeros((self.maxV, self.maxV))                 # Empty Hamiltonian matrix of size MaxV by MaxV    
+        H = np.zeros((self.maxV, self.maxV))    
 
-        for v in range(self.maxV):                           # For loop over all v-values for bra
-            N_i = self.__Norm(v)                             # Normalization consant for bra 
-            H_i = self.__Hermite(v)                          # Hermite polynomial array for bra
+        for v in range(self.maxV):                           
+            N_i = self.__Norm(v)                              
+            H_i = self.__Hermite(v)                          
 
-            for vv in range(v, self.maxV):                   # For loop over all v-values for ket
-                N_j = self.__Norm(vv)                        # Normalization consant for ket
-                H_j = self.__Hermite(vv)                     # Hermite polynomial array for ket
+            for vv in range(v, self.maxV):                   
+                N_j = self.__Norm(vv)                        
+                H_j = self.__Hermite(vv)                     
 
-                inte = 0.                                    # Begin integration at a value of 0.0
+                inte = 0.                                    
             
-                for n in range(len(self.Dcoef)):             # For loop over all polynomial coefficients
-                    mu = self.Dcoef[-1 - n] * ang_m**n       # Convert coefficient to appropriate units
+                for n in range(len(self.Dcoef)):             
+                    mu = self.Dcoef[-1 - n] * ang_m**n       
                     
-                    for i in range(H_i.size):                # Loop over all __Hermite polynomial array values for bra
-                        if H_i.size == 1:           # If __Hermite polynomial is equal to 1
-                            Hi = H_i                # set value to array value (necessary for arrays of length 1)
+                    for i in range(H_i.size):                
+                        if H_i.size == 1:           
+                            Hi = H_i                
                         else:
                             Hi = H_i[i]
-                        if Hi != 0:                          # If bra hermite polynomial array value is not zero
-                            for j in range(H_j.size):        # Loop over all __Hermite polynomial array values for ket
-                                if H_j.size == 1:           # If __Hermite polynomial is equal to 1
-                                    Hj = H_j                # set value to array value (necessary for arrays of length 1)
+                        if Hi != 0:                      
+                            for j in range(H_j.size):       
+                                if H_j.size == 1:           
+                                    Hj = H_j                
                                 else:
                                     Hj = H_j[j]
 
-                                if Hj != 0:                  # If ket hermite polynomial array value is not zero
-                                    TotExp = i + j + n       # Total exponent given __Hermite polynomials of bra, ket, and power series expansion
-                                    if (TotExp % 2) == 0:                                       # Integral goes to 0 for odd values of TotExp
-                                        Hval = float(Hi * Hj)                                   # Total value of bra and ket __Hermite polynomial coefficients
-                                        Bval = 1./ (self.beta**(n + 1))                              # Value to account for powers of beta^n
-                                        Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2)))   # Value of factorials given analtical solution to integral
-                                        inte += mu * Hval * Bval * Fval * np.sqrt(np.pi)        # Add values to running integral value
+                                if Hj != 0:                 
+                                    TotExp = i + j + n      
+                                    if (TotExp % 2) == 0:   
+                                        Hval = float(Hi * Hj) 
+                                        Bval = 1./ (self.beta**(n + 1))   
+                                        Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2))) 
+                                        inte += mu * Hval * Bval * Fval * np.sqrt(np.pi) 
                 
-                D[v, vv] = inte * N_i * N_j             # Assign integral value to entry in Hamiltonian Array
-                D[vv, v] = inte * N_i * N_j             # Hamiltonian array is symmetric so match across the diagonal
-        
-        return D
+                H[v, vv] = inte * N_i * N_j             
+                H[vv, v] = inte * N_i * N_j         
+
+        return H
+
+
 
 class Wavefunctions():
+    '''Class used to contruct the vibrational wave functions on given J-surfaces
 
-    def __init__(self, vals, vecs, trap, beta, L, R, maxV):
-        self.vals = vals
-        self.vecs = vecs
-        self.trap = trap
-        self.beta = beta
-        self.L    = L
-        self.R    = R
-        self.maxV = maxV
+        Functions:
+            __Hermite       - Calculate Hermite polynomials
+            __Norm          - Calculate normalization constant
+            __EvalHerm      - Evaluate the Hermite polynomial on a list of bond lengths
+            __GenerateWF    - Calculate the wave functions
+
+    '''
+
+    def __init__(self, *args, **kwargs): 
+        self.vals = kwargs['vals']
+        self.vecs = kwargs['vecs']
+        self.trap = kwargs['trap']
+        self.beta = kwargs['beta']
+        self.L    = kwargs['L']
+        self.R    = kwargs['R']
+        self.maxV = kwargs['maxV']
 
         self.wfs = self.__GenerateWF()
 
 
     def __Hermite(self, x):
+        ''' Function used to calculate a Hermite polynomial of arbitrary order.
+
+            Variables:
+                x     - Order of the Hermite polynomial
+                Hn_1  - Array of the next lowest Hermite polynomial
+                Hn    - Array of the current Hermite polynomial
+                H_np1 - Array of the next highest Hermite polynomial
+
+            Returns:
+                An array where the index and value correspond to the exponent and the
+                coefficient, respectively.
+
+            Examples:
+                H0(x) =  1                      --> [1]
+                H1(x) =  0 + 2x                 --> [ 0, 2]
+                H2(x) = -2 +  0x + 4x^2         --> [-2, 0, 4]
+                H3(x) =  0 - 12x + 0x^2 + 8x^3  --> [ 0,-12, 0, 8]
+
+        '''
+
         if x == 0:
             return np.array((1))
         elif x == 1:
@@ -378,20 +435,30 @@ class Wavefunctions():
         return H_np1
 
     def __Norm(self, v_):
+        ''' Function to calculate the normalization constant for a harmonic oscillator wave fucntion of order v
+
+            Variables:
+                v_          - Vibrational quantum number
+                self.beta   - Beta value for the diatomic molecule
+
+            Returns:
+                Normalization value
+
+        '''
+
         return (1 / np.pi**0.25) * np.sqrt(self.beta / (2**v_ * math.factorial(v_)))
 
     def __EvalHerm(self, x, arr):
-        ######################################################
-        # Function used to evalute the __Hermite polynomials
-        #
-        # Variables:
-        #   x   - Order of __Hermite polynomial
-        #   arr - array of function values
-        #
-        # Returns:
-        #   HermInte - Function values of __Hermite polynomial
-        #
-        ######################################################
+        '''Function used to evalute the __Hermite polynomials
+
+            Variables:
+                x   - Order of __Hermite polynomial
+                arr - array of function values
+
+            Returns:
+                HermInte - Function values of __Hermite polynomial
+
+        '''
 
         HermVal = self.__Hermite(x)
         HermInte = 0.
@@ -406,29 +473,46 @@ class Wavefunctions():
         return HermInte
 
     def __GenerateWF(self):
+        '''Function used to contruct the vibrational wavefunctions.
+        
+            Variables:
+                Inte        - Array of integral values
+                I_r         - Array of distance values
+                I_sq        - Square of I
+                I_exp       - Exponent component of integral values
+                HermInte    - Array of Hermite polynomial values
+                level       - Vibrational level  (bra)
+                inte        - running integral for a given level
+                state       - Specific row of eigenvector (ket)
+                C           - Eigenvector value for given level and state
+                N           - Normalization constant for given state
+                Herm        - Hermite polynomial for given state
 
-        Inte_full = np.zeros((self.vals.size, self.trap))
 
-        I_full        = np.linspace(self.L*self.beta, self.R*self.beta, self.trap)
-        II_full       = I_full**2
-        IIe_full      = np.exp(-II_full / 2.)
-        HermInte_full = np.zeros((self.vals.size, self.trap))
+        '''
+
+        Inte = np.zeros((self.vals.size, self.trap))
+
+        I_r        = np.linspace(self.L*self.beta, self.R*self.beta, self.trap)
+        I_sq       = I_r**2
+        I_exp      = np.exp(-I_sq / 2.)
+        HermInte   = np.zeros((self.vals.size, self.trap))
 
         for v in range(self.vals.size):
-            HermInte_full[v]   = self.__EvalHerm(v, I_full)
+            HermInte[v]   = self.__EvalHerm(v, I_r)
 
         for level in range(self.vecs.shape[0]):      
-            inte_full = np.zeros((self.trap))       
+            inte = np.zeros((self.trap))       
             for state in range(self.vecs.shape[1]):  
-                C           = self.vecs[level, state]     
-                N           = self.__Norm(state) / np.sqrt(self.beta)     
-                Herm_full   = HermInte_full[state]            
+                C        = self.vecs[level, state]     
+                N        = self.__Norm(state) / np.sqrt(self.beta)     
+                Herm     = HermInte[state]            
 
-                inte_full   += C * Herm_full * N * IIe_full   
+                inte   += C * Herm * N * I_exp 
 
-            full_sq   = inte_full**2
+            inte_sq   = inte**2
 
-            Inte_full[level]   = full_sq / np.amax(full_sq)
+            Inte[level]   = inte_sq / np.amax(inte_sq)
 
-        return I_full, Inte_full
+        return I, Inte
 

@@ -5,8 +5,6 @@
 #       Mass Unit Conversions
 #       Distance Unit Conversions
 #
-#       A function for printing subscript text
-#       A function for printing a line break
 #
 #################################################
 

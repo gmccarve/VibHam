@@ -1,0 +1,178 @@
+Data - The input datafile to be read in by VibHam. Must be in either two or three columns:
+	1 - Bond distance values
+	2 - Energy values
+	3 - Dipole moment values (optional)
+
+	Type 			- str
+	Number of inputs 	- 1
+	Default 		- None
+
+R_unit - Unit for bond distance values.
+
+	Type 			- str
+	Number of inputs 	- 1
+	Default 		- "ang"
+	Options 		- "ang", "bohr", "m"
+
+E_unit - Unit for energy values. 
+
+	Type 			- str
+	Number of inputs 	- 1
+	Default 		- "hartree"
+	Options 		- "hartree", "kj/mol", "kcal/mol", "ev", "j", "cm"
+
+Dip_Unit - Unit for dipole moment values. 
+
+	Type 			- str
+        Number of inputs 	- 1
+	Default 		- "debye"
+	Options 		- "debye", "au"
+
+Atoms - Atoms used for the potential energy curve. Up to element 118 is implemented. 2 values required.
+
+        Type 			- str
+        Number of inputs 	- 2
+        Default 		- None
+
+Masses - Masses of the atoms to be used in the calculation. Must be given in atomic mass units. 2 values required.
+
+        Type 			- float
+        Number of inputs 	- 2
+	Default 		- None
+
+Isotopes - Isotope values to use. Must match with the dictionary found in Atoms.py. 2 Values required. Must match order of Atoms
+
+	Type 			- int
+        Number of inputs 	- 2
+	Default 		- None
+
+E_Fit_Error - Error threshold for polynomial fit for energy in microHartree.
+
+        Type 			- float
+        Number of inputs 	- 1
+	Default 		- 25
+
+Dip_Fit_Error - Error threshold for polynomial fit for dipole moment curve in millDebye
+
+        Type 			- float
+        Number of inputs 	- 1
+	Default 		- 1
+
+Vib_Fit - Degree for power series expansion. Choose option "0" for iterative optimization search. 
+
+	Type            	- int
+        Number of inputs 	- 1
+        Default 		- 0
+        Options 		- 0, 2, 4, 6, 8, 10, 12, 14, 16
+
+Poly_Fit - Degree for polynomial fit for energy curve. Choose option "0" for iterative optimization search.
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 0
+        Options                 - 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+
+Dipole_Fit - Degree for polynomial fit for dipole moment curve. Choose option "0" for iterative optimization search.
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 0
+        Options                 - 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+
+EigVal - Convergence value for eigenvalues of Hamiltonian Matrix in wavenumbers
+
+	Type                    - float
+        Number of inputs        - 1
+        Default                 - 0.1
+
+PsiConv - Convergence value for wavefunctions as # of ab initio data
+
+        Type                    - float
+        Number of inputs        - 1
+        Default                 - 0.001
+
+PlotWF - Plot wavefunction on all J-states
+
+        Type                    - boolean
+        Number of inputs        - 1
+        Default                 - False
+
+J - Maximum Value for Rotational Quantum number
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 0
+
+Trap - Number of intervals for trapezoid rule for numerical integration
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 2000
+
+v - Maximum Value for Vibrational Quantum Number
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 20
+
+Plt - Open all plots as they are produced
+
+        Type                    - boolean
+        Number of inputs        - 1
+        Default                 - False
+
+Print - Level of Printing
+	1 - Print only converged eigenvalues
+	2 - Print only converged eigenvalues/vectors. Also prints all information for iterative optimization
+	3 - Print all eigenvalues. Also prints all information for iterative optimization
+	4 - Print all eigenvalues/vectors. Also prints all information for iterative optimization
+
+	Type 			- int
+	Number of inputes 	- 1
+	Default			- 1
+	Options 		- 1, 2, 3, 4
+
+Test - Used for the implementatin of testing cases
+	
+        Type                    - boolean
+        Number of inputs        - 1
+        Default                 - False
+
+Charge - Charge of molecule
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 0
+
+Anharm - Percentage of Anharmonicity to include in the Total Hamiltonian Matrix
+
+        Type                    - float
+        Number of inputs        - 1
+        Default                 - 100
+
+Accuracy - Number of grid points to include in the polynomial fit. Used for plotting and calculating the minimum of the curve
+
+        Type                    - int
+        Number of inputs        - 1
+        Default                 - 100000
+
+Constants - Number of spectroscopic constants to calcualte for a given state. 
+
+	Type                    - int
+        Number of inputs        - 1
+        Default                 - 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

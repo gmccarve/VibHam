@@ -7,6 +7,9 @@ from Atoms import Atoms
 from Conversions import *
 
 class Metrics:
+    '''Class designed to calculate coefficient of determination (COD), root mean squared error (RMSE), 
+        and mean absolute deviation (MAD) values'''
+
     def __init__(self, ytrue, ypred):
         self.ytrue = ytrue
         self.ypred = ypred
@@ -19,14 +22,39 @@ class Metrics:
 
 
 class Interpolate():
+    '''Class designed to interpolate the energy and dipole moment curve
 
-    def __init__(self, data, masses, numPoints, order_e, order_d):
-        self.data = data
-        self.masses = masses
-        self.pec_numPoints = numPoints[0]
-        self.dip_numPoints = numPoints[0]
-        self.order_e = order_e
-        self.order_d = order_d
+        Functions:
+            __standardPolynomialE - Use a standard polynomial to interpolate the energy curve
+            __powerPolynomialD - Use a power series expansion to interpolate the dipole curve
+            __powerPolynomialE - Use a power series expansion to interpolate the energy curve
+            __transformDipoleMoment - Use to transform the dipole moment curve for isotopically 
+                                        laballed and charged diatomic molecules
+
+        Variables:
+            self.data - Array of energy and dipole curve values
+            self.masses - List of atomic masses
+            self.numPoints - List of the number of interpolation points
+            self.order_e - Order of the energy curve power series
+            self.order_d - Order of the dipole curve power series
+            self.pec_numPoints - Number of interpolation points for the energy curve power series
+            self.dip_numPoints - Number of interpolation points for the dipole curve power series
+            self.reducedMass - Reduced mass of the diatomic
+
+    '''
+
+    def __init__(self, *args, **kwargs): 
+        self.data      = kwargs['temp_data']
+        self.atoms     = kwargs['atoms']
+        self.isotopes  = kwargs['isotopes']
+        self.masses    = kwargs['masses']
+        self.charge    = kwargs['charge']
+        self.numPoints = kwargs['numpoints']
+        self.order_e   = kwargs['order_e']
+        self.order_d   = kwargs['order_d']
+
+        self.pec_numPoints = self.numPoints[0]
+        self.dip_numPoints = self.numPoints[1]
 
         self.reducedMass = ((self.masses[0] * self.masses[1]) / (self.masses[0] + self.masses[1])) * amu_kg
 
@@ -36,7 +64,29 @@ class Interpolate():
         if self.data.shape[0] == 3:
             self.__powerPolynomialD()
 
+
     def __standardPolynomialE(self):
+        '''Function that uses a standard polynomial to fit the energy curve.
+            
+           Used to calculate the equilibrium bond distance and minimum energy.
+
+           Variables:
+                self.R          - Array of bond distances
+                self.E          - Array of energy values
+                self.MaxDeg     - Maximum degree to use for polynomial fit
+                err_arr         - List of error values for polynomial fits
+                self.polyerr    - Lowest mean absolute error value for polynomial fits 
+                self.polyEDeg   - Polynomial degree with the lowest error for the energy curve fit
+                self.polyEFit   - np.polyfit object which fits the energy curve
+                self.polyEPol   - np.poly1d object which fits the energy curve
+                self.PEC_r      - Array of interpolated bond distances (uses self.pec_numPoints)
+                self.PEC_e      - Array of interpolated energy values (uses self.pec_numPoints)
+                self.rEq        - Equilbrium bond distantce
+                self.eEq        - Energy at equilibrium bond distance
+                self.bEq        - Equilibrium rotational constant
+
+        '''
+
         self.R = self.data[0] 
         self.E = self.data[1]
 
@@ -63,8 +113,37 @@ class Interpolate():
         self.bEq = h / ( 8 * np.pi**2 * c_cm * self.reducedMass * (self.rEq*ang_m)**2) # Equilbrium Rotation Constant
 
     def __powerPolynomialD(self):
+        '''Function that uses a power series to fit the diople curve.
+
+           Used to calculate the equilibrium dipole moment.
+
+           Variables:
+                self.D              - Array of dipole moment values
+                self.R              - Array of bond distance values
+                self.rEq            - Equilibrium bond distance
+                ang_m               - Conversion factor between angstrom and meters
+                D_au                - Conversion factor between Debye and atomic units
+                self.polDfit        - np.polyfit object which fits the dipole curve
+                self.polyDpol       - np.poly1d object which fits the dipole curve
+                self.polyDerr_arr   - Array of error values
+                met                 - Metrics class object
+                self.D_cod          - Coefficient of determination value for dipole interpolation
+                self.D_rmse         - Root mean squared error for dipole interpolation
+                self.D_mad          - Mean absolute error value for dipole interpolation
+                self.PEC_rd         - Array of interpolated distance values
+                self.dip_numPoints  - Number of points for interpolation of dipole curvef
+                self.PED_d          - Array of dipole moment values converted to atomic units
+                self.PED_d_         - Array of interpolated dipole moment values
+                self.dEq            - Equilibrium dipole momemnt value
+
+        '''
 
         self.D = self.data[2]
+
+        if self.charge != 0:
+            if self.isotopes[0] != '0' or self.isotopes[1] != '0':
+                self.__transformDipoleMoment()
+
 
         self.polyDfit = np.polyfit((self.R-self.rEq)*ang_m, self.D*D_au, self.order_d)
         self.polyDpol = np.poly1d(self.polyDfit)
@@ -83,7 +162,81 @@ class Interpolate():
 
         self.dEq = self.polyDpol(0)
 
+
+    def __transformDipoleMoment(self, *args, **kwargs):
+            '''Function used to transform the dipole moment functino for an isotopically
+                   labelled and charged diatomic molecule
+
+                Variables:
+                    Atom1 - Identity of atom #1
+                    Atom2 - Identity of atom #2
+                    Iso1  - Isotope of atom #1
+                    Iso2  - Isotope of atom #2 
+                    D - Array of dipole moment values
+                    R - Array of bond distance values
+
+                Returns:
+                    D - Transformed Dipole moment array
+
+            '''
+
+            atom1 = self.atoms[0]
+            atom2 = self.atoms[1]
+
+            mass1 = atom1[0]
+            mass2 = atom2[0]
+
+            mass1_sub = atom1[int(self.isotopes[0])]
+            mass2_sub = atom2[int(self.isotopes[1])]
+
+            if mass1_sub == mass1:
+                ratio_old = mass2 / (mass1 + mass2)
+                ratio_new = mass2_sub / (mass1_sub + mass2_sub)
+
+            elif mass2_sub == mass2:
+                ratio_old = mass1 / (mass1 + mass2)
+                ratio_new = mass1_sub / (mass1_sub + mass2_sub)
+
+            else:
+                return
+
+            if self.charge < 0:
+                self.D -= ((self.R - self.rEq) * ang_bohr) * (ratio_old - ratio_new) / D_au
+            else:
+                self.D += ((self.R - self.rEq) * ang_bohr) * (ratio_old - ratio_new) / D_au
+            
+
     def __powerPolynomialE(self):
+        '''Function that uses a power series to fit the energy curve.
+
+           Used to calculate the equilibrium vibration constant.
+
+           Functions:
+                PowerN - Modified power series beginning at the quadratic term
+
+           Variables:
+                self.R              - Array of distance values
+                self.rEq            - Equilibrium bond distance
+                self.R_             - Array of bond distance values - self.rEq
+                self.E              - Array of energy values
+                self.eEq            - Energy value at the equilibrium bond distance
+                self.E_             - Array of energy values - self.eEq
+                self.Coef           - Power series expansion coefficients
+                self.order_e        - Order of power series expansion
+                self.pec_numPoints  - Number of interpolation points for energy curve
+                self.error          - Array of interpolation errors
+                met                 - Metrics class
+                self.inter_cod      - oefficient of determination value for energy interpolation 
+                self.inter_rmse     - Root mean squared error for energy interpolation
+                self.inter_mad      - Mean absolute error value for energy interpolation
+                hart_J              - Conversion factor between hartree and joules
+                ang_m               - Conversion factor between angstrom and meters
+                self.k              - Force constant (Nm)
+                self.nu             - Vibrational frequency (s^-1)
+                self.omege          - Vibrational constant (cm^-1)
+
+        '''
+
 
         def Power2(x, c2):
             return c2 * x**2
@@ -135,4 +288,5 @@ class Interpolate():
         self.k      = self.Coef[0] * 2
         self.nu     = np.sqrt(self.k/self.reducedMass)
         self.omega  = self.nu /  ( 2 * np.pi * c_cm)
+
 

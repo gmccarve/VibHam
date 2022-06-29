@@ -1,18 +1,9 @@
-##################################################################
-#  This function contains a dictionary of isotopic masses for all       
-#       118 elements                                                    
-#                                                                       
-#  atom    : choice of atom                                             
-#  isotope : choice of isotope                                          
-#                                                                       
-#  retuns : mass of an atom given the isotope                           
-#                                                                         
-##################################################################
-
 class Atoms():
+    '''Class used to populate a dictionary of atomic dictionaries which contain isotope
+        and mass information for all 118 elements'''
 
     def __init__(self):
-        self.AtomDict = {
+        self.AtomDict ={
 
             'H'  :  {
                     0 : 1.007825032239,
@@ -838,5 +829,5 @@ class Atoms():
                     294 : 294.21392, 
                     },
 
-            }
+                    }
 

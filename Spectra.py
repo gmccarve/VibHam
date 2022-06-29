@@ -5,15 +5,43 @@ import matplotlib.pyplot as plt
 from Conversions import *
 
 class Spectra():
+    '''Class designed for the prediction of spectroscopic constants
+
+        Functions:
+            Vibrational                 - Calculate vibrational constants on different J-surfaces
+            Rotational                  - Calculate rotational constants on different v-surfaces
+            Rovibrational               - Calculate rovibratoinal constants 
+            Excitations                 - Calculate all rovibrational excitations
+            Turning Points              - Calculate all classicial turning points on differnet J-surfaces
+            Dunham                      - Calculate rovibrational constants using a Dunham polynomial
+            SimulatedVibrationalPop     - Calculate the population of different vibrational states
+            SimulatedVibrationalInt     - Calculate the intesity of different vibrational transitions
+            SimulatedRotationalPop      - Calculate the population of differnt rotational states
+            SimulatedRotationalInt      - Calculate the intesity of different rotational transitions
+            SimulatedRovibrationalPop   - Calculate the population of differnt rovibrational states
+            SimulatedRovibrationalInt   - Calculate the intesity of different rovibrational transitions
+
+
+    '''
 
     def __init__(self):
         super(Spectra, self).__init__()
 
     def Vibrational(self, vals, maxV, maxJ):
+        '''Function used to calculate vibrational constants on different J-surfaces
 
-        #########################################################
-        # Calculate the vibrational constants on all J-surfaces
-        ##########################################################
+            Variables:
+                vals        - A matrix of eigenvalues
+                temp_vals   - A truncated matrix of eigenvalues
+                maxJ        - The maximum rotational quantum number
+                maxV        - The maximum vibrational quantum number
+                VibSpec     - Matrix of the vibrational constants
+                VibMat      - Matrix used to store the systems of linear equations
+
+            Returns:
+                Matrix of vibrational constants
+
+        '''
 
         temp_vals = vals[:maxJ+1, :maxV+1]
 
@@ -28,15 +56,24 @@ class Spectra():
 
         for j in range(maxJ+1):
             VibSpec[j] = np.matmul(VibMat_inv, temp_vals[j,:])
-
         
         return VibSpec.T
 
     def Rotational(self, vals, maxV, maxJ):
+        '''Function used to calculate rotational constants on different v-surfaces
 
-        #########################################################
-        # Calculate the rotational constants on all v-surfaces
-        ##########################################################
+            Variables:
+                vals        - A matrix of eigenvalues
+                temp_vals   - A truncated matrix of eigenvalues
+                maxJ        - The maximum rotational quantum number
+                maxV        - The maximum vibrational quantum number
+                RotSpec     - Matrix of the rotational constants
+                RotMat      - Matrix used to store the systems of linear equations
+
+            Returns:
+                Matrix of rotational constants
+
+        '''
 
         temp_vals = vals[1:maxJ+2, :maxV+1] - vals[0, :maxV+1]
 
@@ -58,10 +95,28 @@ class Spectra():
         return RotSpec.T
 
     def Rovibrational(self, vals, maxV, maxJ):
+        '''Function used to calculate rovibrational constants
 
-        #########################################################
-        # Calculate the rotation-vibration coupling constants
-        ##########################################################
+            Variables:
+                vals        - A matrix of eigenvalues
+                temp_vals   - A truncated matrix of eigenvalues
+                maxJ        - The maximum rotational quantum number
+                maxV        - The maximum vibrational quantum number
+                num_vib     - Number of vibrational surfaces
+                num_rot     - Number of rotational surfaces
+                num_rov     - Number of rovibratinoal surfaces
+                TotVJ       - Total number of constants to predict
+                CoupMat     - Matrix used to store the systems of linear equations
+                vjmat       - Array of quantum numbers for all constants
+                vjmat_      - Array of quantum numbers for coupled constants
+                vjmat__     - Array of quantum numbers for non-coupled constants
+                CoupMat_inv - Inverse of CoupMat
+                CoupSpec    - Array of rovibrational constants
+
+            Returns:
+                Matrix of rotational constants
+
+        '''
 
         temp_vals = vals[:maxJ+1, :maxV]
 
@@ -70,15 +125,11 @@ class Spectra():
         num_rov = (maxV * (maxJ+1)) - num_vib - num_rot
 
         totVJ = num_vib + num_rot + num_rov
-        CoupMat  = np.zeros((totVJ, totVJ))                 # Matrix used to solve the system of linear equations
+        CoupMat  = np.zeros((totVJ, totVJ))                 
 
-        self.CoupVals = np.zeros((totVJ))                    # Matrix for spectroscopic constants
-
-        count = 0
-
-        vjmat   = np.zeros((totVJ, 2), dtype=int)               # All Values
-        vjmat_  = np.zeros((num_rov, 2), dtype=int)             # Coupled Values
-        vjmat__ = np.zeros((num_vib+num_rot, 2), dtype=int)     # Non-Coupled Values
+        vjmat   = np.zeros((totVJ, 2), dtype=int)           
+        vjmat_  = np.zeros((num_rov, 2), dtype=int)         
+        vjmat__ = np.zeros((num_vib+num_rot, 2), dtype=int)
 
         vj   = 0
         vj_  = 0
@@ -91,13 +142,11 @@ class Spectra():
                 if v > 0 and j > 0:
                     vjmat_[vj_, 0] = v
                     vjmat_[vj_, 1] = j
-
                     vj_ += 1
 
                 else:
                     vjmat__[vj__, 0] = v
                     vjmat__[vj__, 1] = j
-
                     vj__ += 1
 
                 vj += 1
@@ -118,25 +167,39 @@ class Spectra():
                     vj_coup += 1
 
 
-        CoupMat_inv = np.linalg.inv(CoupMat)                # Invert Matrix
-        CoupSpec    = np.matmul(CoupMat_inv, temp_vals.flatten())      # Solve system of linear equations
+        CoupMat_inv = np.linalg.inv(CoupMat)                
+        CoupSpec    = np.matmul(CoupMat_inv, temp_vals.flatten()) 
     
         return CoupSpec, np.append(vjmat__, vjmat_, axis=0)
 
+
     def Excitations(self, vals, vecs, maxV, maxJ, tdm):
-        ####################################################
-        # This function calculates all possible excitations
-        #   given the converged energy levels
-        #
-        # Variables:
-        #   Vals        - Matrix of eigenvalues
-        #   Vects       - Tensor of eigenvectors
-        #   MaxLevel    - Maximum size of matrices
-        #   Dip_Check   - print tdm values
-        #   tdm         - Transition Dipole Moment Matrix
-        #   args        - Input arguments
-        #
-        #####################################################
+        '''Function used to evaluate all rovibrational excitations
+            
+            Variables:
+                excitations_mat - Matrix to store all excitation data
+                    Quantum numbers (4)
+                    Energy levels (3)
+                    Intensity of transtion (3)
+                tdm             - Transition dipole moment matrix
+                vj              - Final vibrational state
+                vi              - Initial vibrational state
+                jl              - Final rotational state
+                jk              - Initial rotational state
+                E_jl            - Final energy level
+                E_ik            - Initial energy level
+                E               - Transition energy
+                t               - Transition dipole moment element
+                vecs            - Matrix of eigenvectors
+                S               - Honl-London factor
+                F               - f-value for the transition
+                A               - Einstein E-coefficient
+
+            Returns:
+                Matrix of excitation data
+
+
+        '''
 
         excitations_mat = np.zeros((10)).T
 
@@ -147,30 +210,45 @@ class Spectra():
                 for jl in range(0, maxJ+1):
                     for jk in range(max(0, jl-1), min(jl+2, maxJ+1)):
 
-                        E_jl = vals[jl,vj]      # Upper energy level
-                        E_ik = vals[jk,vi]      # Lower energy level
+                        E_jl = vals[jl,vj]  
+                        E_ik = vals[jk,vi]  
 
-                        E = E_ik - E_jl         # Transition energy
+                        E = E_ik - E_jl     
 
                         t = np.matmul(vecs[jl,vj,:], np.matmul(tdm, vecs[jk,vi,:]))
     
-                        if abs(E) > 0.:         # If an actual excitation has occured
+                        if abs(E) > 0.:     
 
-                            if jl == jk:        # Honl-London Factors
+                            if jl == jk:    
                                 S = 1
                             elif jl < jk:
                                 S = jl + 1
                             else:
                                 S = jl
 
-                            f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*jl + 1)                       # f-value (Oscilltor strength)
-                            A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jk + 1)  * (4*np.pi*eps_0))   # A-value (Einstein)
+                            f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*jl + 1)
+                            A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jk + 1)  * (4*np.pi*eps_0))
 
                             excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E, t, f, A]).T, axis=0)
                             
         return excitations_mat.reshape(int(excitations_mat.shape[0]/10), 10)[1:]
 
+
     def TurningPoints(self, R, E, vals, rEq):
+        '''Function to calculate all turning points for a given J surface
+    
+            Variables:
+                tps         - Matrix of turning point values (Left, Right)
+                zpoint      - Minimum energy point on energy curve
+                Rl          - Left limit of bond distances
+                Rr          - Right limit of bond distances
+                El          - Left limit of energy values
+                Er          - Right limit of energy values
+                vals        - List of eigenvalues
+                new_arr     - Temporary array of energy values minus the given energy level value
+                new_arr_s   - Sorted array of new_arr
+
+        '''
 
         tps = np.zeros((2, len(vals)))
 
@@ -182,8 +260,6 @@ class Spectra():
         El = E[:zpoint].copy()
         Er = E[zpoint+1:].copy()
 
-        Ee = E.copy()
-
         for j in range(vals.size):
             if vals[j] < np.amax(El):
                 new_arr = abs(El - vals[j])
@@ -191,8 +267,6 @@ class Spectra():
 
                 tps[0,j] = Rl[new_arr_s[0]]
             
-                plt.scatter(tps[0,j], El[new_arr_s[0]])
-
             if vals[j] < np.amax(Er):
                 new_arr = abs(Er - vals[j])
                 new_arr_s = np.argsort(new_arr)
@@ -202,43 +276,48 @@ class Spectra():
         return tps
 
     def Dunham(self, R, E, rEq, eEq, reduced_mass, wEq, bEq):
-        ##############################################################
-        # This function fits the curve to a Dunham-type polynomial
-        #
-        # Variables:
-        #   R       - Array of bond distance values
-        #   rEq     - Equilibrium Bond Distance
-        #   E       - Array of energy values
-        #   eEq     - Equilibrium energy
-        #   wEq   - vibrational constant (cm^-1)
-        #   mu      - vibrational constant (s^-1)
-        #
-        #   a_0     - a0 term in Dunham fit
-        #   an      - Terms in Dunham fit (n = 1 to 6)
-        #
-        #   Y       - Dunham Y-coefficients
-        #
-        ################################################################
+        '''Function used to calculate the Dunham Y-parameters using a Dunham polynomial fit
+
+            Functions:
+                Dunham_Poly - Fit the energy curve to a dunham-type polynomial
+
+            Variables:
+                R           - Array of bond distances
+                rEq         - Equilibrium bond distances
+                E           - Array of energy values
+                eEq         - Minimum energy of energy curve
+                hart_cm     - Conversion of Hatree to wavenumber
+                a_0         - Zeroth order coefficient for Dunham-type polynomial
+                a           - Array of polynomial coefficients
+                aN          - Nth order coefficient for Dunahm-type polynomial
+                Y           - Dunham Y-parameters
+
+            Returns:
+                Dunham Y-parameters
+                Dunham fit coefficients
+
+        '''
     
-        def Dunham_Poly(x, a1, a2, a3, a4, a5, a6):             # Polynomial to fit for Dunham fit
+
+        def Dunham_Poly(x, a1, a2, a3, a4, a5, a6):
                 return (h * c_cm * a_0 * J_cm * x**2) * (1 + a1*x + a2*x**2 + a3*x**3 + a4*x**4 + a5*x**5 + a6*x**6)
 
 
-        R = (R - rEq) / rEq          # Change bond distance array to be function of a dimensionaless value
-        E = (E - eEq) * hart_cm      # Shift energy value arry to set minimum to 0 and convert to wavenumbers
+        R = (R - rEq) / rEq          
+        E = (E - eEq) * hart_cm      
 
-        a_0 = wEq**2 / (4 * bEq)                          # Calculate zeroth order expansion coefficient for the Dunham polynomial
+        a_0 = wEq**2 / (4 * bEq)     
 
-        a, pcov = curve_fit(Dunham_Poly, R, E)              # Fit curve to Dunham polynomial
+        a, pcov = curve_fit(Dunham_Poly, R, E)
 
-        a1 = a[0]       # First  Dunham expansion coefficient
-        a2 = a[1]       # Second Dunham expansion coefficient
-        a3 = a[2]       # Third  Dunham expansion coefficient
-        a4 = a[3]       # Fourth Dunham expansion coefficient
-        a5 = a[4]       # Fifth  Dunham expansion coefficient
-        a6 = a[5]       # Sxith  Dunham expansion coefficient
+        a1 = a[0]
+        a2 = a[1]
+        a3 = a[2]
+        a4 = a[3]
+        a5 = a[4]
+        a6 = a[5]
 
-        Y = np.zeros((5,5))     # Matrix for Dunham Y-coefficients
+        Y = np.zeros((5,5))
 
         Y[0,0] = ((bEq / 8.) * (3 * a2 - 7 * a1**2 / 4.))
         Y[1,0] = (wEq * (1 + (bEq**2 / (4 * wEq**2)) \
@@ -279,10 +358,27 @@ class Spectra():
               * (233 + 279 * a1 + 189 * a1**2 + 63 * a1**3 - 88 * a1 * a2 - 120 * a2 + 80 * a3 / 3.))
         Y[0,4] = (-(64 * bEq**7 / wEq**6) * (13 + 9. * a1 - a2 + 9 * a1**2/4.))
 
-
         return Y.flatten(), a
 
+
     def SimulatedVibrationalPop(self, *args, **kwargs):
+        '''Function to calculate the population of vibrational states
+            Uses a Boltzmann distribution
+            
+            Variables:
+                temp        - Temperature in kelvin
+                J           - Rotational surface
+                v           - Maximum vibrational state
+                method      - Method to calculate populations
+                                vib - A single J-surface
+                                rov - All J-surfaces
+                vals        - Eigenvalues
+            
+            Returns:
+                pop         - List of populations for vibrational states
+
+        '''
+
         temp   = kwargs['temp']
         J      = kwargs['J']
         v      = kwargs['v']
@@ -311,6 +407,42 @@ class Spectra():
         return pop
 
     def SimulatedVibrationalInt(self, *args, **kwargs):
+        '''Function to calculate the intensity of all vibrational transitions.
+
+           Uses the previous calculated population values and the Einstein-A
+               Coefficients.
+
+            Variables:
+                J           - Rotational surface
+                v           - Highest vibrational state
+                vals        - Eigenvalues
+                vecs        - Eigenvectors
+                tdm         - Transition dipole moment matrix
+                method      - Method to calculate intensities
+                                vib - A single J-surface
+                                rov - All J-surfaces
+                pop         - List of populations on vibrational states
+                vv          - Initial vibrational state
+                vv_         - Final vibrational state
+                E_init      - Energy of initial state
+                E_final     - Energy of final state
+                E           - Energy of transition
+                t           - Transition dipole moment element
+                f           - f-value of transition
+                A           - Einstein-A coefficient of transition
+                m_e         - electron mass
+                cm_J        - Conversion factor between wavenumbers and Joules
+                h           - Reduced Plancks constant
+                D_CM        - Conversion factor between Debye and Coulomb-meters
+                eps_0       - Vacuum permitivity value
+                c           - speed of light
+
+
+            Returns:
+                int_mat     - List of intensities for vibrational excitations
+
+        '''
+
         J    = kwargs['J']
         v    = kwargs['v']
         vecs = kwargs['vec']
@@ -368,6 +500,23 @@ class Spectra():
 
 
     def SimulatedRotationalPop(self, *args, **kwargs):
+        '''Function to calculate the population of vibrational states
+            Uses a Boltzmann distribution
+
+            Variables:
+                temp        - Temperature in kelvin
+                J           - Maximum rotational state
+                v           - Vibrational surface
+                method      - Method to calculate populations
+                                rot - A single v-surface
+                                rov - All v-surfaces
+                vals        - Eigenvalues
+
+            Returns:
+                pop         - List of populations for rotational states
+
+        '''
+        
         temp   = kwargs['temp']
         J      = kwargs['J']
         v      = kwargs['v']
@@ -401,6 +550,43 @@ class Spectra():
         return pop
 
     def SimulatedRotationalInt(self, *args, **kwargs):
+        '''Function to calculate the intensity of all rotational transitions.
+            
+           Uses the previous calculated population values and the Einstein-A
+               Coefficients.
+
+            Variables:
+                J           - Maximum rotational state
+                v           - Vibrational surface
+                vals        - Eigenvalues
+                vecs        - Eigenvectors
+                tdm         - Transition dipole moment matrix
+                method      - Method to calculate intensities
+                                rot - A single v-surface
+                                rov - All v-surfaces
+                pop         - List of population for all rotatitional states
+                jj          - Initial rotational state
+                jj_         - Final rotational state
+                E_init      - Energy of initial state
+                E_final     - Energy of final state
+                E           - Energy of transition 
+                t           - Transition dipole moment element
+                S           - Honl-London factor
+                f           - f-value of transition
+                A           - Einstein-A coefficient of transition
+                m_e         - electron mass
+                cm_J        - Conversion factor between wavenumbers and Joules
+                h           - Reduced Plancks constant
+                D_CM        - Conversion factor between Debye and Coulomb-meters
+                eps_0       - Vacuum permitivity value
+                c           - speed of light
+
+
+            Returns:
+                int_mat     - List of intensities for rotational excitations
+
+        '''
+
         J    = kwargs['J']
         v    = kwargs['v']
         vecs = kwargs['vec']
@@ -422,15 +608,15 @@ class Spectra():
 
                     if abs(E) > 0 and abs(t) > 0:
 
-                        if jj == jj_:        # Honl-London Factors
+                        if jj == jj_:
                             S = 1
                         elif jj < jj_:
                             S = jj + 1
                         else:
                             S = jj
 
-                        f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*J + 1)
-                        A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*J + 1) * (4*np.pi*eps_0))
+                        f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*jj + 1)
+                        A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jj + 1) * (4*np.pi*eps_0))
 
                         int_mat[0,cc] = E
                         int_mat[1,cc] = A * pop[1,jj_]
@@ -453,7 +639,7 @@ class Spectra():
 
                         if abs(E) > 0 and abs(t) > 0:
 
-                            if jj == jj_:        # Honl-London Factors
+                            if jj == jj_:
                                 S = 1
                             elif jj < jj_:
                                 S = jj + 1
@@ -474,6 +660,20 @@ class Spectra():
         
 
     def SimulatedRovibrationalPop(self, *args, **kwargs):
+        '''Function to calculate the population of vibrational states
+            Uses a Boltzmann distribution
+
+            Variables:
+                temp        - Temperature in kelvin
+                J           - Maximum rotational state
+                v           - Maximum vibrational state
+                vals        - Eigenvalues
+
+            Returns:
+                pop         - List of populations for rovibrational states
+
+        '''
+
         temp = kwargs['temp']
         J    = kwargs['J']
         v    = kwargs['v']
@@ -527,6 +727,40 @@ class Spectra():
 
 
     def SimulatedRovibrationalInt(self, *args, **kwargs):
+        '''Function to calculate the intensity of all rotational transitions.
+
+           Uses the previous calculated population values and the Einstein-A
+               Coefficients.
+
+            Variables:
+                vecs        - Eigenvectors
+                tdm         - Transition dipole moment matrix
+                pop         - List of populations for all rovibrational states
+                jj          - Initial rotational state
+                j           - Final rotational state
+                vv          - Initial vibrational state
+                v           - Final vibrational state
+                E_init      - Energy of initial state
+                E_final     - Energy of final state
+                E           - Energy of transition
+                pop_init    - Population of initial state
+                t           - Transition dipole moment element
+                S           - Honl-London factor
+                f           - f-value of transition
+                A           - Einstein-A coefficient of transition
+                m_e         - electron mass
+                cm_J        - Conversion factor between wavenumbers and Joules
+                h           - Reduced Plancks constant
+                D_CM        - Conversion factor between Debye and Coulomb-meters
+                eps_0       - Vacuum permitivity value
+                c           - speed of light
+
+
+            Returns:
+                int_mat     - Matrix of intensity values
+
+        '''
+
         vec = kwargs['vec']
         pop = kwargs['pop']
         tdm = kwargs['tdm']
@@ -552,7 +786,7 @@ class Spectra():
                     t = np.matmul(vec[j,v,:], np.matmul(tdm, vec[jj,vv,:])) / D_au
 
                     if abs(E) > 0 and abs(t) > 0:
-                        if j == jj:        # Honl-London Factors
+                        if j == jj:
                             S = 1
                         elif j < jj:
                             S = j + 1

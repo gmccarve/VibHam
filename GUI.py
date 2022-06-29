@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import random
 import os
-import time
 import traceback
 import io
 import csv
@@ -14,25 +13,16 @@ from Interpolate import Interpolate
 from Hamil import Hamil, Wavefunctions
 from Spectra import Spectra
 
-from functools import partial
-
-from scipy.optimize import curve_fit
-
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
-from PyQt5.QtCore import Qt, QEvent, QAbstractTableModel, QVariant, QModelIndex, QTimer, QRect, QPoint
+from PyQt5.QtCore import Qt, QEvent, QAbstractTableModel, QRect, QPoint
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
-#https://realpython.com/python-menus-toolbars/
-#TODO
-    # Status bar when constucting matrices or WF ? 
-
-
 class MainWindow(QMainWindow):
-
+    '''Main window of the VibHam application'''
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
@@ -40,6 +30,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._tabwidget)
 
 class TabWidget(QTabWidget):
+    '''Tab widget used to separate the many different functions into individual tabs'''
     def __init__(self, *args, **kwargs):
         QTabWidget.__init__(self, *args, **kwargs)
         self.setTabBar(TabBar(self))
@@ -88,13 +79,16 @@ class TabWidget(QTabWidget):
 
 
     def __exit_program(self):
+        '''Function used to exit the program and close all windows'''
         exit()
 
     def __openErrorMessage(self):
+        '''Function used to open all error windows used for the VibHam GUI'''
         self.EW = ErrorWindow(self.errorText)
         self.EW.show()
 
     def __diagonalize(self, M):
+        '''Function used to diagonalize square matrices or tensors composed of square matrices.'''
         try:
             val = np.zeros((M.shape[:2]))
             vec = np.zeros((M.shape))
@@ -111,6 +105,7 @@ class TabWidget(QTabWidget):
         return val*J_cm, vec
 
     def eventFilter(self, source, event):
+        '''Function used to copy data from internal tables.'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -118,6 +113,7 @@ class TabWidget(QTabWidget):
         return super(TabWidget, self).eventFilter(source, event)
 
     def copySelection(self):
+        '''Function used to copy data from internal tables.'''
         list_of_tables = [self.data_table, 
                           self.eigenvalue_table, 
                           self.vib_spec_table,
@@ -149,16 +145,29 @@ class TabWidget(QTabWidget):
     def __MolecularPropertiesTab(self):
 
         '''
-            Tab Number 1 - Molecular Properties
+        Tab Number 1 - Molecular Properties
+
+        Used to read in a 2- or 3-column data and convert the data therein to appropriate units
+
+        Functions:
+
+            Load data file
+            Assign atoms
+            Assign isotopes
+            Assign masses
+            Assign energy units
+            Assign length units
+            Assign dipole moment units
+
         '''
 
         # Initialize some of the variables
         
-        self.filename = ''
-        self.data_ = np.zeros((3, 1))
+        self.filename = ''                      # Data file to load
+        self.data_ = np.zeros((3, 1))           # Initial numpy matrix of zeros
         self.data = self.data_.copy()
     
-        self.Atoms = Atoms()
+        self.Atoms = Atoms()                    # Dictionary of atomic dictionaries
 
         self.atom1 = self.Atoms.AtomDict['H']   # Dictionary of isotopes and their masses for atom #1
         self.atom2 = self.Atoms.AtomDict['H']   # Dictionary of isotopes and their masses for atom #2
@@ -172,7 +181,8 @@ class TabWidget(QTabWidget):
         self.energy_unit = 'Hartrees'       # Energy unit of data file
         self.length_unit = 'Å'              # Distance unit of data file
         self.dipole_unit = 'D'              # Dipole unit of data file
-
+        
+        self.charge = 0             # Charge of diatomic
 
         # Load Example File
 
@@ -187,6 +197,7 @@ class TabWidget(QTabWidget):
         self.load_CO_example_btn.setFixedWidth(120)
 
         # Location of datafile
+        
         self.browse_files = QPushButton("&Open File")
         self.browse_files.clicked.connect(self.__browsefiles)
         self.browse_files.clicked.connect(self.__show_datatable)
@@ -286,6 +297,7 @@ class TabWidget(QTabWidget):
         self.charge_box = QSpinBox()
         self.charge_box.setRange(-10, 10)
         self.charge_box.setFixedWidth(100)
+        self.charge_box.valueChanged.connect(self.__charge_box_changed)
 
         # Define the choices for the input energy
 
@@ -387,8 +399,6 @@ class TabWidget(QTabWidget):
         self.tab1.grid_layout.addWidget(QLabel("Charge"), row, 0, alignment=Qt.AlignCenter)
         self.tab1.grid_layout.addWidget(self.charge_box, row, 1, 1, 2)
         
-        #self.tab1.grid_layout.addWidget(self.toolbar1, row, 7, 1, 3, alignment=Qt.AlignCenter)
-
         for j in range(25):
             row+=1
             self.tab1.grid_layout.addWidget(QLabel(""), row, 0, 1, 3, alignment=Qt.AlignCenter)
@@ -399,9 +409,8 @@ class TabWidget(QTabWidget):
 
         self.tab1.setLayout(self.tab1.grid_layout)
 
-    # Functions for the molecular properties tab
-
     def __load_CO_example_data(self):
+        '''Used to load example data for carbon monoxide (CO)'''
         self.filename = self.path + "/Examples/CO/CO.txt"
         self.data_ = np.loadtxt(self.filename).T
         self.data = self.data_.copy()
@@ -430,6 +439,7 @@ class TabWidget(QTabWidget):
         self.__plot_datatable()
 
     def __load_HF_example_data(self):
+        '''Used to load example data for hydrogen fluoride (HF)'''
         self.filename = self.path + "/Examples/HF/HF.txt"
         self.data_ = np.loadtxt(self.filename).T
         self.data = self.data_.copy()
@@ -459,6 +469,7 @@ class TabWidget(QTabWidget):
         self.__plot_datatable()
 
     def __browsefiles(self):
+        '''Open a file system to load a specific data file'''
         try:
             self.__clear_data_values()
             fname = QFileDialog.getOpenFileName(self, 'Open file', os.getcwd())
@@ -474,6 +485,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __show_datatable(self):
+        '''Display the loaded data file to an internal table'''
         try:
             if self.data_.shape[0] == 2:
                 self.data_labels = ["R", "E", "Include?"]
@@ -501,6 +513,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __add_data_table_row(self, row_data):
+        '''Used to add a new row to the internal data table'''
         row = self.data_table.rowCount()
         self.data_table.setRowCount(row+1)
         col = 0
@@ -516,6 +529,7 @@ class TabWidget(QTabWidget):
             col += 1
 
     def __refresh_data_values(self):
+        '''Refresh the data table. Useful when loading an external file'''
         try:
             self.data_include_vals = []
             for row in range(self.data_.shape[1]):
@@ -529,6 +543,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()     
 
     def __clear_data_values(self):
+        '''Clear the data table of all values. Useful for loading data'''
         self.data_ = np.zeros((3, 1))
         self.data = np.zeros((3, 1))
 
@@ -538,6 +553,7 @@ class TabWidget(QTabWidget):
         self.__plot_datatable()
 
     def __plot_datatable(self):
+        '''Used to plot the information in the data table in 1-2 plots'''
         try:
             self.data[0]
         except:
@@ -578,6 +594,7 @@ class TabWidget(QTabWidget):
                 self.__openErrorMessage()
     
     def __atom1_combo_selected(self):
+        '''Activated following a change in the combo box for the identify of atom 1'''
         self.atom1 = self.Atoms.AtomDict[self.atom1_box.currentText()]
         
         self.iso1_box.clear()
@@ -589,6 +606,7 @@ class TabWidget(QTabWidget):
         self.mass1_str.setText(str(round(self.mass1, 8)))
 
     def __atom2_combo_selected(self):
+        '''Activated following a change in the combo box for the identify of atom 2'''
         self.atom2 = self.Atoms.AtomDict[self.atom2_box.currentText()]
         
         self.iso2_box.clear()
@@ -600,6 +618,7 @@ class TabWidget(QTabWidget):
         self.mass2_str.setText(str(round(self.mass2, 8)))
 
     def __iso1_combo_selected(self):
+        '''Activated following a change in the combo box for the identify of isotope 1'''
         self.iso1 = self.iso1_box.currentText()
 
         try:
@@ -610,6 +629,7 @@ class TabWidget(QTabWidget):
             pass
 
     def __iso2_combo_selected(self):
+        '''Activated following a change in the combo box for the identify of isotope 2'''
         self.iso2 = self.iso2_box.currentText()
 
         try:
@@ -620,6 +640,7 @@ class TabWidget(QTabWidget):
             pass
 
     def __mass1_str_changed(self):
+        '''Activated following a change in the value for the mass of atom 1'''
         try:
             self.mass1 = float(self.mass1_str.text())
         except:
@@ -630,6 +651,7 @@ class TabWidget(QTabWidget):
             self.mass1_str.setText(str(self.mass1))
 
     def __mass2_str_changed(self):
+        '''Activated following a change in the value for the mass of atom 2'''
         try:
             self.mass2 = float(self.mass2_str.text())
         except:
@@ -640,21 +662,46 @@ class TabWidget(QTabWidget):
             self.mass2_str.setText(str(self.mass2))
 
     def __energy_box_selected(self):
+        '''Activated following a change in the combo box for the energy unit'''
         self.energy_unit = self.energy_box.currentText()
 
     def __length_box_selected(self):
+        '''Activated following a change in the combo box for the length unit'''
         self.length_unit = self.length_box.currentText()
 
     def __dipole_box_selected(self):
+        '''Activated following a change in the combo box for the dipole moment unit'''
         self.dipole_unit = self.dipole_box.currentText()
 
+    def __charge_box_changed(self):
+        self.charge = self.charge_box.value()
 
 
 
     def __PowerSeriesExpansionTab(self):
 
         '''
-            Tab Number 2 - Power Series Expansion
+        Tab Number 2 - Power Series Expansion
+
+        Used to interpolate the given data using power series expansions for the energy and dipole curves
+
+        Functions:
+
+            Calculate the equilibrium bond length
+            Calculate the minimem energy 
+            Calcualte the equilibrium rotational constant
+            Interpolate the energy curve 
+            Calculate the equilibrium vibrational constant
+            Calculate errors for the fit
+            Plot the energy curve and the interpolated energy curve
+            Plot the error for the fit
+            Show the error for the fit in a table
+            Interpolate the dipole moment curve (if given)
+            Calculate the equilibrium dipole moment (if given)
+            Calculate the errors for the fit (if given)
+            Plot the dipole curve and the interpoalted dipole curve (if given)
+            Plot the error for the fit (if given)
+            Show the error for the fit in a table (if given)
         '''
 
 
@@ -687,7 +734,8 @@ class TabWidget(QTabWidget):
         self.dipole_lab = QLabel("Dipole")
         self.dipole_lab.setFixedWidth(50)
         
-        # Select Power Series order and Number of Interpolation Points
+        # Select Power Series order
+        
         self.pec_order_box = QComboBox()
         self.pec_order_box.addItems(['2', '4', '6', '8', '10', '12', '14', '16'])
         self.pec_order_box.setCurrentText(str(self.pec_order))
@@ -708,6 +756,8 @@ class TabWidget(QTabWidget):
         self.dip_order_box.setToolTip("Order of power series expansion for the dipole moment curve")
         self.dip_order_box.setFixedWidth(100)
 
+        # Number of interpolatino points
+        
         self.inter_lab = QLabel("Interpolation Points")
         self.inter_lab.setToolTip("Number of points to use\nto interpolate the\nrespective curves")
 
@@ -722,18 +772,16 @@ class TabWidget(QTabWidget):
         self.dip_inter_val.setFixedWidth(100)
 
         # Interpolate Data
-
+        
         self.inter_push = QPushButton("&Interpolate the Energy && Dipole Curves")
         self.inter_push.clicked.connect(self.__interpolate_data)
         self.inter_push.clicked.connect(self.__plot_inter_energy_err)
         self.inter_push.clicked.connect(self.__plot_inter_energy)
 
-
         self.inter_shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
         self.inter_shortcut.activated.connect(self.__interpolate_data)
         self.inter_shortcut.activated.connect(self.__plot_inter_energy_err)
         self.inter_shortcut.activated.connect(self.__plot_inter_energy)
-
 
         # Power Series Coefficients
 
@@ -815,6 +863,7 @@ class TabWidget(QTabWidget):
         self.dEq_val.setFixedWidth(100)
 
         # Plot the potential energy curve and errors and show errors
+        
         self.plot_inter_data = PlotCurve_111(self)
         self.plot_inter_data_tb = NavigationToolbar2QT(self.plot_inter_data, self)
 
@@ -822,6 +871,7 @@ class TabWidget(QTabWidget):
         self.plot_inter_data_err_tb = NavigationToolbar2QT(self.plot_inter_data_err, self)
 
         # Open tables to view error values
+        
         self.show_data_lab = QLabel("Display Error Values")
         self.show_data_err = QPushButton("Energy")
         self.show_data_err.clicked.connect(self.__show_energy_err)
@@ -844,6 +894,7 @@ class TabWidget(QTabWidget):
         self.plot_dipole_btn.clicked.connect(self.__plot_inter_dipole)
         self.plot_dipole_btn.clicked.connect(self.__plot_inter_dipole_err)
         self.plot_dipole_btn.setFixedWidth(100)
+
 
         # Define the layout of the tab using a grid
 
@@ -944,15 +995,16 @@ class TabWidget(QTabWidget):
         
         self.tab2.setLayout(self.tab2.grid_layout)
 
-    # Functions for the power series interpolation tab
-
     def __pec_order_box_selected(self):
+        '''Used to assign the order of power series expansion for the energy curve'''
         self.pec_order = self.pec_order_box.currentText()
 
     def __dip_order_box_selected(self):
+        '''Used to assign the order of power series expansion for the dipole curve'''
         self.dip_order = self.dip_order_box.currentText()
 
     def __pec_inter_pts_changed(self):
+        '''Used to assign the number of points used for the interpolation of the energy curve'''
         try:
             self.pec_inter_pts = int(self.pec_inter_val.text())
         except:
@@ -961,6 +1013,7 @@ class TabWidget(QTabWidget):
             self.pec_inter_val.setText(str(self.pec_inter_pts))
 
     def __dip_inter_pts_changed(self):
+        '''Used to assign the number of points used for the interpolation of the dipole curve'''
         try:
             self.dip_inter_pts = int(self.dip_inter_val.text())
         except:
@@ -969,6 +1022,7 @@ class TabWidget(QTabWidget):
             self.dip_inter_val.setText(str(self.dip_inter_pts))
 
     def __interpolate_data(self):
+        '''Interpolate the energy curve and the dipole curve (if given)'''
 
         self.dEq_val.setText('')
         self.dip_mad_val.setText('')
@@ -984,6 +1038,7 @@ class TabWidget(QTabWidget):
 
         
         def convert_units():
+            '''Convert the energy and dipole curve to hatrees, Angstrom, and Debye'''
             if self.energy_unit.lower() == 'hartrees':
                 self.temp_data[1] /= 1
             elif self.energy_unit.lower() == 'kcal/mol':
@@ -1019,17 +1074,21 @@ class TabWidget(QTabWidget):
                 self.errorText = 'Order of power series must be less than the number of data points '
                 self.__openErrorMessage()
                 return
+            
 
-
-            inter = Interpolate(self.temp_data,
-                                [self.mass1, self.mass2],
-                                [self.pec_inter_pts, self.dip_inter_pts],
-                                int(self.pec_order),
-                                int(self.dip_order)
+            inter = Interpolate(temp_data = self.temp_data,
+                                atoms     = [self.atom1, self.atom2],
+                                isotopes  = [self.iso1, self.iso2],
+                                masses    = [self.mass1, self.mass2],
+                                charge    = self.charge,
+                                numpoints = [self.pec_inter_pts, self.dip_inter_pts],
+                                order_e   = int(self.pec_order),
+                                order_d   = int(self.dip_order)
                                 )
 
 
             if self.data.shape[0] == 3:
+                '''Dipole data provided'''
                 self.dEq         = inter.dEq        # Equilibrium dipole moment value
                 self.PEC_d       = inter.PEC_d      # Actual dipole moment values
                 self.PEC_d_      = inter.PEC_d_     # Interpolated dipole moment values
@@ -1050,6 +1109,7 @@ class TabWidget(QTabWidget):
                 self.dipole_coef_btn.setEnabled(True)
 
             else:
+                '''No dipole data provided'''
                 self.dEq = 0
                 self.PEC_d = np.zeros((1))
                 self.PEC_d_ = np.zeros((1))
@@ -1100,6 +1160,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __energy_coefficients(self):
+        '''Open an external table to view the power series expansion coefficients for the energy curve'''
         try:
             self.coef_win.close()
         except:
@@ -1112,6 +1173,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __dipole_coefficients(self):
+        '''Open an external table to view the power series expansion coefficients for the dipole curve'''
         try:
             self.coef_win.close()
         except:
@@ -1124,6 +1186,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __plot_inter_energy(self):
+        '''Plot the interpolated and actual energy curves'''
         try:
             self.plot_inter_data.axes.cla()
             self.plot_inter_data.axes.scatter(self.PEC_r, self.PEC_e, marker='x', c='b', label='EST Data')
@@ -1138,6 +1201,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __plot_inter_dipole(self):
+        '''Plot the interpolated and actual dipole curves'''
         if self.dipole_bool == True:
             try:
                 self.plot_inter_data.axes.cla()
@@ -1154,6 +1218,7 @@ class TabWidget(QTabWidget):
 
 
     def __plot_inter_energy_err(self):
+        '''Plot the error between the interpolated and actual energy curves'''
         try:
             self.plot_inter_data_err.axes.cla()
             self.plot_inter_data_err.axes.scatter(self.PEC_r, self.inter_err_arr, marker='x', c='r')
@@ -1168,6 +1233,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __plot_inter_dipole_err(self):
+        '''Plot the error between the interpolated and actual dipole curves'''
         if self.dipole_bool == True:
             try:
                 self.plot_inter_data_err.axes.cla()
@@ -1183,6 +1249,7 @@ class TabWidget(QTabWidget):
                 self.__openErrorMessage()
 
     def __show_energy_err(self):
+        '''Open an external table to show the error between the interpolated and acutal energy curves'''
         try:
             self.errval_win.close()
         except:
@@ -1195,6 +1262,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __show_dipole_err(self):
+        '''Open an external table to show the error between the interpolated and acutal dipole curves'''
         if self.dipole_bool == False:
             self.errorText = "No dipole data given"
             self.__openErrorMessage()
@@ -1217,23 +1285,44 @@ class TabWidget(QTabWidget):
 
         '''
             Tab Number 3 - Vibrational Hamiltonian
+
+        Used to generate the vibrational hamilatonians
+
+        Functions:
+
+            Define the maximum vibrational quantum number
+            Define the maximum rotational quantum number
+            Generate the Harmonic matrix
+            Generate the Anharmonic matrix
+            Generate the Centrifugal matrix
+            Generate the Transition Dipole Moment matrix
+            Generate all matrices
+            View each of the five matrices
+            Save each of the five matrcies
+            Check the stability of the total matrix
+            Calculate the highest converged state of the total matrix
+            View the eigenvectors
+            View the eigenvector contributions
+            Refresh the eigenvalues
+
         '''
 
         # Initialize some of the variables
 
-        self.maxV = 20
-        self.maxJ = 10
+        self.maxV = 20          # Maximum vibrational quantum number
+        self.maxJ = 10          # Maximum rotational quantum number
 
-        self.harmonic    = np.zeros((self.maxV+1, self.maxV+1))
-        self.anharmonic  = np.zeros((self.maxV+1, self.maxV+1))
-        self.centrifugal = np.zeros((self.maxJ+1, self.maxV+1, self.maxV+1))
-        self.tdm         = np.zeros((self.maxV+1, self.maxV+1))
+        self.harmonic    = np.zeros((self.maxV+1, self.maxV+1))                 # Initial harmonic matrix
+        self.anharmonic  = np.zeros((self.maxV+1, self.maxV+1))                 # Initial anharmonic matrix
+        self.centrifugal = np.zeros((self.maxJ+1, self.maxV+1, self.maxV+1))    # Initial centriffugal matrix
+        self.tdm         = np.zeros((self.maxV+1, self.maxV+1))                 # Initial transition dipole moment (tdm) matrix
         
-        self.total = self.harmonic + self.anharmonic + self.centrifugal
+        self.total = self.harmonic + self.anharmonic + self.centrifugal         # Initial total matrix
 
-        self.trunc_err_val = 0.01
-        self.max_trunc_val = self.maxV
-        self.trunc_err_arr = np.ones((self.max_trunc_val))*self.maxV
+        self.trunc_err_val = 0.01                                       # Maximum error for truncation
+        self.max_trunc_val = self.maxV                                  # Maximum converged qauntum state
+        self.trunc_err_arr = np.ones((self.max_trunc_val))*self.maxV    # Array of converged quantum states
+
 
         # Change values for quantum numbers
 
@@ -1247,8 +1336,7 @@ class TabWidget(QTabWidget):
         self.maxJ_str = QLineEdit(str(self.maxJ))
         self.maxJ_str.editingFinished.connect(self.__maxJ_str_changed)
         self.maxJ_str.editingFinished.connect(self.__rot_spec_changed)
-        self.maxJ_str.setFixedWidth(100)
-        
+        self.maxJ_str.setFixedWidth(100)        
     
         # Generate Hamiltonian Matrices
 
@@ -1269,7 +1357,6 @@ class TabWidget(QTabWidget):
         self.cent_btn.setFixedWidth(100)
         self.tdm_btn.setFixedWidth(100)
         self.all_btn.setFixedWidth(100)
-
 
         self.harm_btn.clicked.connect(self.__generate_harm_matrix)
         self.anharm_btn.clicked.connect(self.__generate_anharm_matrix)
@@ -1325,7 +1412,6 @@ class TabWidget(QTabWidget):
         self.tdm_btn.setFixedWidth(100)
         self.all_btn.setFixedWidth(100)
 
-
         # Check stability of matrix
 
         self.check_stabil_btn = QPushButton("Check Stability of Total Matrix")
@@ -1376,9 +1462,6 @@ class TabWidget(QTabWidget):
         self.tab3.grid_layout.addWidget(self.maxV_str, row, 1)
 
         self.tab3.grid_layout.addWidget(QLabel("Eigenvalues"), row, 4, 1, 4, alignment=Qt.AlignCenter)
-
-        #self.spacer_right3 = QSpacerItem(1, 10, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        #self.tab3.grid_layout.addItem(self.spacer_right3, row, 4)
 
         row+=1
         self.tab3.grid_layout.addWidget(self.maxJ_lab, row, 0, alignment=Qt.AlignCenter)
@@ -1455,9 +1538,13 @@ class TabWidget(QTabWidget):
 
         self.tab3.setLayout(self.tab3.grid_layout)
 
-    # Functions for the vibrational Hamiltonian tab
 
     def __maxV_str_changed(self):
+        '''
+        Used to change the maximum vibrational quantum number. 
+        Cascades to change values in other tabs:
+            Limits for plotting the simulated spectra
+        '''
         try:
             self.maxV = int(self.maxV_str.text())
             self.harmonic    = np.zeros((self.maxV+1, self.maxV+1))
@@ -1478,7 +1565,13 @@ class TabWidget(QTabWidget):
             self.maxV_str.setText(str(self.maxV))
 
     def __maxJ_str_changed(self):
-
+        '''
+        Used to change the maximum vibrational quantum number. 
+        Cascades to change values in other tabs:
+            Limits for plotting the simulated spectra
+            Limits for the order of the spectroscopic constants
+            Limits for the order of the plotted wavefunctions
+        '''
         try:
             if int(self.maxJ_str.text()) > -1:
                 self.maxJ = int(self.maxJ_str.text())
@@ -1528,6 +1621,7 @@ class TabWidget(QTabWidget):
             self.maxJ_str.setText(str(self.maxJ))
     
     def __generate_harm_matrix(self):
+        '''Generate the harmonic matrix'''
         try:
             gen_hamil = Hamil(ID   = 'harm',
                               maxv = self.maxV+1,
@@ -1544,6 +1638,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __generate_anharm_matrix(self):
+        '''Generate the anharmonic matrix'''
         try:
             gen_hamil = Hamil(ID = 'anharm',
                               maxV = self.maxV+1,
@@ -1561,6 +1656,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __generate_cent_matrix(self):
+        '''Generate the centrifugal matrix'''
         try:
             gen_hamil = Hamil(ID = 'cent',
                               cent = self.centrifugal,
@@ -1582,6 +1678,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __generate_tdm_matrix(self):
+        '''Generate the transition dipole moment matrix'''
         try:
             gen_hamil = Hamil(ID = 'tdm',
                               maxV = self.maxV+1,
@@ -1594,7 +1691,10 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __generate_all_matrix(self):
+        '''Generate the harmonic, anharmonic, centrifugal, and transition dipole moment matrices'''
         try:
+            self.__interpolate_data()
+
             gen_harm = Hamil(ID   = 'harm',
                              maxv = self.maxV+1,
                              nu   = self.nu
@@ -1634,6 +1734,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __view_harm_matrix(self):
+        '''Open an external table to view the constructed harmonic matrix'''
         try:
             self.view.close()
         except:
@@ -1642,6 +1743,7 @@ class TabWidget(QTabWidget):
                                  val='Harmonic Matrix')
         self.view.show()
     def __view_anharm_matrix(self):
+        '''Open an external table to view the constructed anharmonic matrix'''
         try:
             self.view.close()
         except:
@@ -1651,6 +1753,7 @@ class TabWidget(QTabWidget):
         self.view.show()
 
     def __view_cent_matrix(self):
+        '''Open an external table to view the constructed centrifugal matrix'''
         try:
             self.view.close()
         except:
@@ -1665,6 +1768,7 @@ class TabWidget(QTabWidget):
                                      J=self.maxJ)
 
     def __view_tdm_matrix(self):
+        '''Open an external table to view the constructed transition dipole moment matrix'''
         try:
             self.view.close()
         except:
@@ -1675,6 +1779,7 @@ class TabWidget(QTabWidget):
         self.view.show()
 
     def __view_all_matrix(self):
+        '''Open an external table to view the constructed total matrix'''
         try:
             self.view.close()
         except:
@@ -1688,6 +1793,7 @@ class TabWidget(QTabWidget):
                                      val='Total RoVibrational Matrix')
 
     def __save_harm_matrix(self):
+        '''Save the constructed harmonic matrix to a file'''
         try:
             self.save_file_window.close()
         except:
@@ -1697,6 +1803,7 @@ class TabWidget(QTabWidget):
         self.save_file_window = SaveWindow(message)
 
     def __save_anharm_matrix(self):
+        '''Save the constructed anharmonic matrix to a file'''
         try:
             self.save_file_window.close()
         except:
@@ -1706,6 +1813,7 @@ class TabWidget(QTabWidget):
         self.save_file_window = SaveWindow(message)
 
     def __save_cent_matrix(self):
+        '''Save the constructed centrifugal matrix to a file'''
         try:
             self.save_file_window.close()
         except:
@@ -1715,6 +1823,7 @@ class TabWidget(QTabWidget):
         self.save_file_window = SaveWindow(message)
 
     def __save_tdm_matrix(self):
+        '''Save the constructed transition dipole moment matrix to a file'''
         try:
             self.save_file_window.close()
         except:
@@ -1724,6 +1833,7 @@ class TabWidget(QTabWidget):
         self.save_file_window = SaveWindow(message)
 
     def __save_all_matrix(self):
+        '''Save the constructed total matrix to a file'''
         try:
             self.save_file_window.close()
         except:
@@ -1733,9 +1843,11 @@ class TabWidget(QTabWidget):
         self.save_file_window = SaveWindow(message)
 
     def __max_trunc_error_changed(self):
+        '''Activated to change the value for the maximum truncation error'''
         self.trunc_err_val = float(self.max_trunc_error_val.text())
     
     def __truncate_matrix(self):
+        '''Used to calculate the maximum vibrational states given a trunction error'''
         try:
             total_val,  total_vec  = self.__diagonalize(self.total)
             total_val_, total_vec_ = self.__diagonalize(self.total[:,:-1,:-1])
@@ -1771,6 +1883,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __check_matrix_stability(self):
+        '''Check the stability of the total matrix for negative eigenvalues'''
         try:
             self.vals, self.vects = self.__diagonalize(self.total)
             n = 0
@@ -1797,6 +1910,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __show_eigenvalue_table(self):
+        '''Update the internal table to display the eigenvalues'''
         try:
             self.harm_val, self.harm_vec = self.__diagonalize(self.harmonic)
             self.total_val, self.total_vec = self.__diagonalize(self.total)
@@ -1827,6 +1941,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __add_eigenvalue_table_row(self, row_data):
+        '''Used to add a new row to the eigenvalue table'''
         row = self.eigenvalue_table.rowCount()
         self.eigenvalue_table.setRowCount(row+1)
         col = 0
@@ -1839,6 +1954,7 @@ class TabWidget(QTabWidget):
             col += 1
 
     def __show_eigenvectors(self):
+        '''Used to open an external table to view the eigenvectors'''
         self.total_val, self.total_vec = self.__diagonalize(self.total)
         try:
             self.view.close()
@@ -1853,6 +1969,7 @@ class TabWidget(QTabWidget):
                                      val='Eigenvectors Matrix')
     
     def __show_contributions(self):
+        '''Used to open an external table to view the eigenvector contributions'''
         self.total_val, self.total_vec = self.__diagonalize(self.total)
         try:
             self.view.close()
@@ -1867,10 +1984,23 @@ class TabWidget(QTabWidget):
                                      val='Contributions Matrix')
 
 
+
     def __SpectroscopicConstantsTab(self):
         
         '''
             Tab Number 4 - Spectroscopic Constants
+        
+        Used to calculate spectroscopic constants of arbitrary order
+
+        Functions:
+
+        Calculate vibrational constants
+        Calculate rotational constants
+        Calculate rovibrational constants
+        Plot vibrational constants as a function of the J-state
+        Plot rotational constants as a functino of the v-state
+
+
         '''
 
         # Initialize some of the starting variables
@@ -1879,6 +2009,7 @@ class TabWidget(QTabWidget):
         self.rot_spec_order = 0
 
         # Change Order of Vibrational Spectroscopic Constants
+
         self.vib_spec_lab = QLabel("Vibrational Constants")
         self.vib_spec_order_box = QSpinBox(self)
         self.vib_spec_order_box.setRange(0, int(self.max_trunc_val))
@@ -1889,6 +2020,7 @@ class TabWidget(QTabWidget):
         self.vib_spec_order = self.vib_spec_order_box.value()
 
         # Change Order of Rotational Spectroscopic Constants
+        
         self.rot_spec_lab = QLabel("Rotational Constants")
         self.rot_spec_order_box = QSpinBox()
         self.rot_spec_order_box.setRange(0, int(self.maxJ-1))
@@ -1896,10 +2028,12 @@ class TabWidget(QTabWidget):
         self.rot_spec_order_box.valueChanged.connect(self.__rovib_spec_changed)
         self.rot_spec_order_box.setFixedWidth(100)
 
-        # Rovbrational Label
+        # Rovibrational Label
+        
         self.rovib_spec_lab = QLabel("Rovibrational Constants")
     
-        # Calculate Spectroscopic Constants
+        # Display Spectroscopic Constants
+        
         self.vib_spec_table = QTableWidget()
         self.vib_spec_table.installEventFilter(self)
 
@@ -1974,6 +2108,7 @@ class TabWidget(QTabWidget):
         self.tab4.setLayout(self.tab4.grid_layout)
 
     def __refresh_spec_values(self):
+        '''Used to refresh the spectroscopic constants'''
 
         self.rot_plot.axes.cla()
         self.vib_plot.axes.cla()
@@ -1986,6 +2121,7 @@ class TabWidget(QTabWidget):
 
         
     def __vib_spec_changed(self):
+        '''Activated when the order of the vibrational constant changes'''
         try:
             self.vib_column = ["J=" + str(e) for e in range(self.maxJ+2, -1, -1)]
             self.vib_column.append('Constant')
@@ -2015,6 +2151,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __rot_spec_changed(self):
+        '''Activated when the order of the rotational constant changes'''
         if self.maxJ == 0:
             while (self.rot_spec_table.rowCount()) > 0:
                 self.rot_spec_table.removeRow(0)
@@ -2048,6 +2185,7 @@ class TabWidget(QTabWidget):
                 self.__openErrorMessage()
 
     def __rovib_spec_changed(self):
+        '''Activated when the order of the rovibrational constants change'''
         if self.maxJ == 0:
             while (self.rovib_spec_table.rowCount()) > 0:
                 self.rovib_spec_table.removeRow(0)
@@ -2071,6 +2209,7 @@ class TabWidget(QTabWidget):
                 self.__openErrorMessage()
 
     def __get_vib_spec_id(self):
+        '''Used to assign labels given the order of the vibrational constants'''
         vib_spec_id_list = []
         for v in range(self.vib_spec_order+1):
             if v == 0:
@@ -2086,6 +2225,7 @@ class TabWidget(QTabWidget):
         return vib_spec_id_list
 
     def __get_rot_spec_id(self):
+        '''Used to assign labels given the order of the vibrational constants'''
         rot_spec_id_list = []
         for j in range(self.rot_spec_order+1):
             if j == 0:
@@ -2101,6 +2241,7 @@ class TabWidget(QTabWidget):
         return rot_spec_id_list
 
     def __vib_spec_table(self):
+        '''Used to generate the table of vibrational constants'''
         self.total_val, self.total_vec = self.__diagonalize(self.total)
         try:
             spectra = Spectra()
@@ -2114,6 +2255,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __rot_spec_table(self):
+        '''Used to generate the table of rotational constants'''
         self.total_val, self.total_vec = self.__diagonalize(self.total)
         try:
             if self.maxJ == 0:
@@ -2130,6 +2272,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __rovib_spec_table(self):
+        '''Used to generate the table of rovibrational constants'''
         try:
             spectra = Spectra()
             self.rovib_spec_values, self.vjmat = spectra.Rovibrational(self.total_val,
@@ -2141,6 +2284,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __add_vib_table_row(self, row_data):
+        '''Used to add a new row of data to the vibrational constants table'''
         row = self.vib_spec_table.rowCount()
         self.vib_spec_table.setRowCount(row+1)
         col = 0
@@ -2157,6 +2301,7 @@ class TabWidget(QTabWidget):
             col += 1
 
     def __add_rot_table_row(self, row_data):
+        '''Used to add a new row of data to the vibrational constants table'''
         row = self.rot_spec_table.rowCount()
         self.rot_spec_table.setRowCount(row+1)
         col = 0
@@ -2173,6 +2318,7 @@ class TabWidget(QTabWidget):
             col += 1
 
     def __add_rovib_table_row(self, row_data):
+        '''Used to add a new row of data to the vibrational constants table'''
         row = self.rovib_spec_table.rowCount()
         self.rovib_spec_table.setRowCount(row+1)
         col = 0
@@ -2189,6 +2335,7 @@ class TabWidget(QTabWidget):
             col += 1
 
     def __vib_spec_plot_changed(self):
+        '''Used to plot the vibrational constant as a function of the j-states'''
         try:
             j_val = int(self.vib_spec_plot_box.value())
 
@@ -2206,6 +2353,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __rot_spec_plot_changed(self):
+        '''Used to plot the rotational constant as a function of the v-states'''
         try:
             v_val = int(self.rot_spec_plot_box.value())
 
@@ -2249,6 +2397,17 @@ class TabWidget(QTabWidget):
 
         '''
             Tab Number 5 - Rovibrational Excitations
+
+        Used to calculate all possible rovibrational excitations
+
+        Functions:
+
+        Calculate all rovibrational excitations with intensities (if given)
+        Sort by J-value for vibrational excitations
+        Sort by v-value for rotational excitattions
+        Sort by J/v-values for rovibrational excitations
+
+
         '''
 
         # Initialize some of the variables
@@ -2266,6 +2425,7 @@ class TabWidget(QTabWidget):
         self.excitation_all_btn.clicked.connect(self.__sort_all_excitations)
 
         # Excitation Table
+
         self.excitations_table = QTableWidget()
         self.excitations_table.installEventFilter(self)
         
@@ -2294,6 +2454,7 @@ class TabWidget(QTabWidget):
 
         
     def __sort_vib_excitations(self):
+        '''Used to calculate and sort the excitation data by J-values for vibrational excitations'''
         try:
             excite = Spectra()
             self.excitations = excite.Excitations(self.total_val, 
@@ -2321,12 +2482,12 @@ class TabWidget(QTabWidget):
             for i in range(self.excitations.shape[0]):
                 self.__add_excitations_table_row([*self.excitations[i]])
 
-
         except Exception as e:
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
     def __sort_rot_excitations(self):
+        '''Used to calculate and sort the excitation data by v-values for rotational excitations'''
         try:
             excite = Spectra()
             self.excitations = excite.Excitations(self.total_val, 
@@ -2359,6 +2520,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __sort_all_excitations(self):
+        '''Used to calculate and sort the excitation data by v/J-values for rovibrational excitations'''
         try:
             self.total_val, self.total_vec = self.__diagonalize(self.total)
             excite = Spectra()
@@ -2387,6 +2549,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __add_excitations_table_row(self, row_data):
+        '''Used to add a new row of data to the data table'''
         row = self.excitations_table.rowCount()
         self.excitations_table.setRowCount(row+1)
         col = 0
@@ -2404,6 +2567,14 @@ class TabWidget(QTabWidget):
 
         '''
             Tab Number 6 - Dunham Fit
+
+        Used to fit the energy curve to a Dunham polynomial and calculate Dunham parameters
+
+        Functions:
+
+            Fit the energy curve to a Dunham-type polynomial
+            Use the fit coefficients to calculate Dunham Y-parameters (spectrocscopic constants)
+
         '''
 
         # Dunham Coefficients
@@ -2464,6 +2635,7 @@ class TabWidget(QTabWidget):
 
 
     def __dunham_vals(self):
+        '''Used to calculate and sort the Dunham Y-parameters and coefficients'''
         try:
             dunham = Spectra()
             self.dunham_Y, self.dunham_coef = dunham.Dunham(self.data[0], 
@@ -2504,6 +2676,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __add_dunham_param_table_row(self, row_data):
+        '''Used to add a new row to the Dunham parameter table'''
         row = self.dunham_param_table.rowCount()
         self.dunham_param_table.setRowCount(row+1)
         col = 0
@@ -2516,6 +2689,7 @@ class TabWidget(QTabWidget):
             col += 1
 
     def __add_dunham_coef_table_row(self, row_data):
+        '''Used to add a new row to the Dunham coefficient table'''
         row = self.dunham_coef_table.rowCount()
         self.dunham_coef_table.setRowCount(row+1)
         col = 0
@@ -2533,6 +2707,9 @@ class TabWidget(QTabWidget):
 
         '''
             Tab Number 7 - Wavefunctions
+
+        Used to calculate the vibrational wavefunctions on different J-surfaces
+
         '''
 
         # Initialize some of the variables
@@ -2586,7 +2763,7 @@ class TabWidget(QTabWidget):
 
 
     def __wavefunction_view(self):
-
+        '''Used to calculate and plot the wave functions'''
         J = self.view_wfs_j_box.value()
         v = self.view_wfs_v_box.value()
 
@@ -2648,6 +2825,8 @@ class TabWidget(QTabWidget):
 
         '''
             Tab Number 7 - Turning Points
+
+        Used to calculate the classical turning points for a diatomic molecule on different J-surfaces
         '''
 
         # Initialize some of the variables
@@ -2700,6 +2879,7 @@ class TabWidget(QTabWidget):
 
 
     def __plot_tps(self):
+        '''Calculate and plot the classical turning points on different J-surfaces'''
         self.tps_j_val = self.tps_box.value()
 
         try:
@@ -2752,6 +2932,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __add_tps_table(self, row_data):
+        '''Used to add a row to the turning points data table'''
         row = self.tps_table.rowCount()
         self.tps_table.setRowCount(row+1)
         col = 0
@@ -2768,6 +2949,19 @@ class TabWidget(QTabWidget):
 
         '''
             Tab Number 9 - Simulated Spectra Tab
+
+        Used to calculate the population of each quantum state and the intensity of each transition (if dipole given)
+
+        Functions:
+            Calculate the population of vibrational states on different J-surfaces
+            Calculate the population of rotational states on different v-surfaces
+            Calculate the population of rovibrational states
+            Calculate the intensity of vibrational excitations on one or all J-surfaces
+            Calculate the intensity of rotational excitations on one or all v-surfaces
+            Calculate the intensity of rovibrational excitations
+            Plot all population/intensity data
+            Display all population/intensity data in an external table
+
         '''
 
         # Initialize some variables
@@ -2982,6 +3176,7 @@ class TabWidget(QTabWidget):
 
 
     def __change_temp(self):
+        '''Used to modify the plots and tables given a change in temperature'''
         try:
             float(self.temp_str.text())
 
@@ -2999,6 +3194,7 @@ class TabWidget(QTabWidget):
             self.temp_str.setText(str(self.temp))
 
     def __change_vib_limits(self):
+        '''Used to change the vibrational plots and tables given new v/J limits'''
         self.vib_sim_spec_v_val.setRange(1, self.max_trunc_val)
         self.vib_sim_spec_v_val.setValue(self.max_trunc_val)
         self.vib_sim_spec_j_val.setRange(-1, self.maxJ)
@@ -3007,6 +3203,7 @@ class TabWidget(QTabWidget):
         self.__change_vib_sim_spec()
 
     def __change_rot_limits(self):
+        '''Used to change the rotational plots and tables given new v/J limits'''
         self.rot_sim_spec_j_val.setRange(0, self.maxJ)
         self.rot_sim_spec_j_val.setValue(self.maxJ)
         self.rot_sim_spec_v_val.setRange(-1, self.max_trunc_val)
@@ -3015,6 +3212,7 @@ class TabWidget(QTabWidget):
         self.__change_rot_sim_spec()
 
     def __change_rov_limits(self):
+        '''Used to change the rovibrational plots and tables given new v/J limits'''
         self.rov_sim_spec_j_val.setRange(0, self.maxJ)
         self.rov_sim_spec_j_val.setValue(0)
         self.rov_sim_spec_v_val.setRange(0, self.max_trunc_val)
@@ -3024,6 +3222,9 @@ class TabWidget(QTabWidget):
 
     
     def __change_vib_method(self, b):
+        '''Used to change the method displayed for the vibrational plots and tables. 
+            Population refers to the population of individual vibrational states
+            Intensity refers to the intensity of each pure vibrational transition'''
         if b.text() == "Population":
             if b.isChecked() == True:
                 self.vib_method = 'pop'
@@ -3038,6 +3239,9 @@ class TabWidget(QTabWidget):
         self.__change_vib_sim_spec()
 
     def __change_rot_method(self, b):
+        '''Used to change the method displayed for the rotational plots and tables. 
+            Population refers to the population of individual rotational states
+            Intensity refers to the intensity of each pure rotational transition'''
         if b.text() == "Population":
             if b.isChecked() == True:
                 self.rot_method = 'pop'
@@ -3052,6 +3256,9 @@ class TabWidget(QTabWidget):
         self.__change_rot_sim_spec()
 
     def __change_rov_method(self, b):
+        '''Used to change the method displayed for the rovibrational plots and tables. 
+            Population refers to the population of individual rovibrational states
+            Intensity refers to the intensity of each pure rovibrational transition'''
         if b.text() == "Population":
             if b.isChecked() == True:
                 self.rov_method = 'pop'
@@ -3067,6 +3274,7 @@ class TabWidget(QTabWidget):
 
 
     def __change_vib_cutoff(self):
+        '''Used to change the cutoff value for plotting the vibrational population/intensity data'''
         try:
             self.vib_cutoff = float(self.vib_cutoff_val.text())
         except:
@@ -3074,6 +3282,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __change_rot_cutoff(self):
+        '''Used to change the cutoff value for plotting the rotational population/intensity data'''
         try:
             self.rot_cutoff = float(self.rot_cutoff_val.text())
         except:
@@ -3081,6 +3290,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __change_rov_cutoff(self):
+        '''Used to change the cutoff value for plotting the rovibrational population/intensity data'''
         try:
             self.rov_cutoff = float(self.rov_cutoff_val.text())
         except:
@@ -3089,6 +3299,11 @@ class TabWidget(QTabWidget):
 
 
     def __change_vib_sim_spec(self):
+        '''Used to update the plot and data table with the vibrational states.
+           
+           Calculates the population of each state using a Boltzmann distribution and 
+           uses those values with the calculated Einstein-A coefficients to determine the 
+           intensity of a given vibrational transition'''
         try:
             val, vec = self.__diagonalize(self.total)
             
@@ -3127,9 +3342,14 @@ class TabWidget(QTabWidget):
                 
                 else:
                     #TODO HEATMAP
+                    vj_arr = np.zeros((3, pop.shape[0]*pop.shape[2]))
+                    for v_ in range(pop.shape[2]):
+                        for j_ in range(pop.shape[0]):
+                            vj_arr[0, j_, v_] = 
                     self.vib_sim_spec_plot.axes.cla()
-                    self.vib_sim_spec_plot.axes.scatter(0, 0)
+                    self.vib_sim_spec_plot.axes.scatter(0, 0, marker='s', s=100)
                     self.vib_sim_spec_plot.draw()
+                    print (pop.shape)
 
             elif self.vib_method == 'int':
 
@@ -3175,6 +3395,12 @@ class TabWidget(QTabWidget):
 
 
     def __change_rot_sim_spec(self):
+        '''Used to update the plot and data table with the rotational states.
+
+           Calculates the population of each state using a Boltzmann distribution and
+           uses those values with the calculated Einstein-A coefficients to determine the
+           intensity of a given rotational transition'''
+
         try:
             self.rot_cutoff = float(self.rot_cutoff_val.text())
             val, vec = self.__diagonalize(self.total)
@@ -3266,6 +3492,12 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __change_rov_sim_spec(self):
+        '''Used to update the plot and data table with the rovibrational states.
+
+           Calculates the population of each state using a Boltzmann distribution and
+           uses those values with the Calculated Einstein-A coefficients to determine the
+           intensity of a given rovibrational transition'''
+
         try:
             self.rov_cutoff = float(self.rov_cutoff_val.text())
             val, vec = self.__diagonalize(self.total)
@@ -3319,6 +3551,7 @@ class TabWidget(QTabWidget):
 
 
     def __vib_spec_datatable(self):
+        '''Used to update and open an external window for the vibrational data table'''
         try:
             val, vec = self.__diagonalize(self.total)
 
@@ -3361,6 +3594,7 @@ class TabWidget(QTabWidget):
 
 
     def __rot_spec_datatable(self):
+        '''Used to update and open an external window for the rotational data table'''
         try:
             val, vec = self.__diagonalize(self.total)
 
@@ -3402,6 +3636,7 @@ class TabWidget(QTabWidget):
             self.__openErrorMessage()
 
     def __rov_spec_datatable(self):
+        '''Used to update and open an external window for the rovibrational data table'''
         try:
             val, vec = self.__diagonalize(self.total)
 
@@ -3436,6 +3671,7 @@ class TabWidget(QTabWidget):
 
 
 class PlotCurve_111(FigureCanvasQTAgg):
+    '''Class used to construct a single matplotlib plot'''
 
     def __init__(self, Parent=None, dpi=100):
         fig = Figure(dpi=dpi, tight_layout=True)
@@ -3443,6 +3679,7 @@ class PlotCurve_111(FigureCanvasQTAgg):
         super(PlotCurve_111, self).__init__(fig)
 
 class PlotCurve_212(FigureCanvasQTAgg):
+    '''Class used to construct side-by-side matplotlib plots'''
 
     def __init__(self, Parent=None, dpi=100):
         fig = Figure(dpi=dpi, tight_layout=True)
@@ -3450,15 +3687,8 @@ class PlotCurve_212(FigureCanvasQTAgg):
         self.axes2 = fig.add_subplot(212)
         super(PlotCurve_212, self).__init__(fig)
 
-class PlotCurve_221(FigureCanvasQTAgg):
-
-    def __init__(self, Parent=None, dpi=100):
-        fig = Figure(dpi=dpi, tight_layout=True)
-        self.axes1 = fig.add_subplot(121)
-        self.axes2 = fig.add_subplot(122)
-        super(PlotCurve_221, self).__init__(fig)
-
 class PandasModel(QAbstractTableModel):
+    '''Class used to open and populate external datatables'''
 
     def __init__(self, data, edit):
         super().__init__()
@@ -3495,6 +3725,8 @@ class PandasModel(QAbstractTableModel):
     
 
 class CoefficientWindow(QWidget):
+    '''Class used to open and populate an external window to display power series
+       coefficient data'''
 
     def __init__(self, coef, val):
         super(CoefficientWindow, self).__init__()
@@ -3545,6 +3777,7 @@ class CoefficientWindow(QWidget):
         self.close()
 
     def eventFilter(self, source, event):
+        '''Function used to copy cells from an external datatable'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -3552,6 +3785,7 @@ class CoefficientWindow(QWidget):
         return super(CoefficientWindow, self).eventFilter(source, event)
 
     def copySelection(self):
+        '''Function used to copy cells from an external datatable'''
         selection = self.table.selectedIndexes()
         if selection:
             rows = sorted(index.row() for index in selection)
@@ -3568,6 +3802,8 @@ class CoefficientWindow(QWidget):
             qApp.clipboard().setText(stream.getvalue())
 
 class InterpolationErrorWindow(QWidget):
+    '''Class used to open and populate an external datatable that displayes
+        the error of interpolation for both the energy and dipole curves'''
 
     def __init__(self, R, error, val):
         super(InterpolationErrorWindow, self).__init__()
@@ -3609,6 +3845,7 @@ class InterpolationErrorWindow(QWidget):
         self.close()
 
     def eventFilter(self, source, event):
+        '''Function used to copy cells from an external datatable'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -3616,6 +3853,7 @@ class InterpolationErrorWindow(QWidget):
         return super(InterpolationErrorWindow, self).eventFilter(source, event)
 
     def copySelection(self):
+        '''Function used to copy cells from an external datatable'''
         selection = self.table.selectedIndexes()
         if selection:
             rows = sorted(index.row() for index in selection)
@@ -3632,6 +3870,8 @@ class InterpolationErrorWindow(QWidget):
             qApp.clipboard().setText(stream.getvalue())
 
 class StabilityWindow(QWidget):
+    '''Class used to open an external window to detail the stability of the 
+        constructed total Hamiltonian matrix'''
 
     def __init__(self, trunc, val):
         super(StabilityWindow, self).__init__()
@@ -3660,6 +3900,11 @@ class StabilityWindow(QWidget):
         self.close()
 
 class MatrixWindow(QWidget):
+    '''Class used to populate and open an external datatable that displays
+        one of the constructed Hamiltonian matrices.
+
+        If the matrix is J-dependent, an initial window is opened asking 
+        about the J-surface to display.'''
 
     def __init__(self, *args, **kwargs):
         super(MatrixWindow, self).__init__()
@@ -3717,6 +3962,7 @@ class MatrixWindow(QWidget):
         self.close()
 
     def eventFilter(self, source, event):
+        '''Function used to copy cells from an external datatable'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -3724,6 +3970,7 @@ class MatrixWindow(QWidget):
         return super(MatrixWindow, self).eventFilter(source, event)
 
     def copySelection(self):
+        '''Function used to copy cells from an external datatable'''
         selection = self.table.selectedIndexes()
         if selection:
             rows = sorted(index.row() for index in selection)
@@ -3740,6 +3987,8 @@ class MatrixWindow(QWidget):
             qApp.clipboard().setText(stream.getvalue())
 
 class MatrixWindow_AskJ(QWidget):
+    '''Class used to open a window to ask which J-surface to display the centrifugal 
+        or total Hamiltonian matrices on'''
 
     def __init__(self, *args, **kwargs):
         super(MatrixWindow_AskJ, self).__init__()
@@ -3779,6 +4028,8 @@ class MatrixWindow_AskJ(QWidget):
 
 
 class TruncationWindowValues(QWidget):
+    '''Class to populate and open an external datatable with the error values associated
+        with the truncation of the total Hamiltonian matrix'''
 
     def __init__(self, vals):
         super(TruncationWindowValues, self).__init__()
@@ -3808,6 +4059,11 @@ class TruncationWindowValues(QWidget):
 
 
 class TruncationWindow(QWidget):
+    '''Class to display the vibrational states on differetn J-surfaces which have 
+        converged according to a truncation of the total Hamiltonian matrix. 
+
+        Can open an additional window that shows the truncation errors for all 
+        vibrational states.'''
 
     def __init__(self, trunc, vals):
         super(TruncationWindow, self).__init__()
@@ -3838,7 +4094,7 @@ class TruncationWindow(QWidget):
         self.no_btn = QPushButton("No")
         
         self.yes_btn.clicked.connect(self.__view_truncation)
-        self.no_btn.clicked.connect(self.__close_window)
+        self.no_btn.clicked.connect(self.__exit_program)
 
         self.hbox = QHBoxLayout()
         self.hbox.addWidget(self.yes_btn)
@@ -3859,12 +4115,11 @@ class TruncationWindow(QWidget):
     def __view_truncation(self):
         self.c = TruncationWindowValues(self.vals)
         self.c.show()
-        
 
-    def __close_window(self):
-        self.close()
 
 class SaveWindow(QWidget):
+    '''Class used to open an external dialog box to indicate that the chosen matrix
+        has been saved to an external file'''
 
     def __init__(self, *args, **kwargs):
         super(SaveWindow, self).__init__()
@@ -3883,6 +4138,11 @@ class SaveWindow(QWidget):
 
 
 class VibSpecDataTable(QWidget):
+    '''Class used to populate and open an external datatable with information
+        about the vibrational excitations.
+
+        Can display either populations of vibrational states or intensities
+        of excitations.'''
         
     def __init__(self, *args, **kwargs):
         super(VibSpecDataTable, self).__init__()
@@ -3976,6 +4236,7 @@ class VibSpecDataTable(QWidget):
         self.close()
 
     def eventFilter(self, source, event):
+        '''Function used to copy cells from an external datatable'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -3983,6 +4244,7 @@ class VibSpecDataTable(QWidget):
         return super(VibSpecDataTable, self).eventFilter(source, event)
         
     def copySelection(self):
+        '''Function used to copy cells from an external datatable'''
         selection = self.table.selectedIndexes()
         if selection:
             rows = sorted(index.row() for index in selection)
@@ -4000,6 +4262,11 @@ class VibSpecDataTable(QWidget):
 
 
 class RotSpecDataTable(QWidget):
+    '''Class used to populate and open an external datatable with information
+        about the rotational excitations.
+
+        Can display either populations of rotational states or intensities
+        of excitations.'''
 
     def __init__(self, *args, **kwargs):
         super(RotSpecDataTable, self).__init__()
@@ -4093,6 +4360,7 @@ class RotSpecDataTable(QWidget):
         self.close()
 
     def eventFilter(self, source, event):
+        '''Function used to copy cells from an external datatable'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -4100,6 +4368,7 @@ class RotSpecDataTable(QWidget):
         return super(RotSpecDataTable, self).eventFilter(source, event)
 
     def copySelection(self):
+        '''Function used to copy cells from an external datatable'''
         selection = self.table.selectedIndexes()
         if selection:
             rows = sorted(index.row() for index in selection)
@@ -4116,6 +4385,11 @@ class RotSpecDataTable(QWidget):
             qApp.clipboard().setText(stream.getvalue())
 
 class RovSpecDataTable(QWidget):
+    '''Class used to populate and open an external datatable with information
+        about the rovibrational excitations.
+
+        Can display either populations of rovibrational states or intensities
+        of excitations.'''
 
     def __init__(self, *args, **kwargs):
         super(RovSpecDataTable, self).__init__()
@@ -4160,6 +4434,7 @@ class RovSpecDataTable(QWidget):
         self.close()
 
     def eventFilter(self, source, event):
+        '''Function used to copy cells from an external datatable'''
         if (event.type() == QEvent.KeyPress and
             event.matches(QKeySequence.Copy)):
             self.copySelection()
@@ -4167,6 +4442,7 @@ class RovSpecDataTable(QWidget):
         return super(RovSpecDataTable, self).eventFilter(source, event)
 
     def copySelection(self):
+        '''Function used to copy cells from an external datatable'''
         selection = self.table.selectedIndexes()
         if selection:
             rows = sorted(index.row() for index in selection)
@@ -4185,6 +4461,7 @@ class RovSpecDataTable(QWidget):
 
 
 class ErrorWindow(QWidget):
+    '''Class used to open a dialog box with error information'''
 
     def __init__(self, errorText):
         super().__init__()
@@ -4199,10 +4476,13 @@ class ErrorWindow(QWidget):
 
         self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
         self.exit_shortcut.activated.connect(self.__exit_program)
+
     def __exit_program(self):
         self.close()
 
 class TabBar(QTabBar):
+    '''Class used to contruct the tab-based main window'''
+
     def tabSizeHint(self, index):
         s = QTabBar.tabSizeHint(self, index)
         s.transpose()
@@ -4231,6 +4511,8 @@ class TabBar(QTabBar):
             painter.restore()
 
 class ProxyStyle(QProxyStyle):
+    '''Class used to modify the base proxy style for the tab-based main window'''
+
     def drawControl(self, element, opt, painter, widget):
         if element == QStyle.CE_TabBarTabLabel:
             ic = self.pixelMetric(QStyle.PM_TabBarIconSize)
