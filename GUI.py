@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
-from PyQt5.QtCore import Qt, QEvent, QAbstractTableModel, QRect, QPoint
+from PyQt5.QtCore import Qt, QEvent, QAbstractTableModel, QRect, QPoint, QObject, QThread, pyqtSignal
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
@@ -3341,15 +3341,22 @@ class TabWidget(QTabWidget):
                     self.vib_sim_spec_plot.draw()
                 
                 else:
-                    #TODO HEATMAP
-                    vj_arr = np.zeros((3, pop.shape[0]*pop.shape[2]))
                     for v_ in range(pop.shape[2]):
                         for j_ in range(pop.shape[0]):
-                            vj_arr[0, j_, v_] = 
-                    self.vib_sim_spec_plot.axes.cla()
-                    self.vib_sim_spec_plot.axes.scatter(0, 0, marker='s', s=100)
+                            self.vib_sim_spec_plot.axes.text(v_, 
+                                                             j_, 
+                                                             round(pop[j_, 1, v_], 3),
+                                                             ha='center',   
+                                                             va='center',
+                                                             color=plt.cm.binary(pop[j_, 1, v_]/np.amax(pop[:,1,:]))
+                                                             )
+
+                    self.vib_sim_spec_plot.axes.set_title("Population for all States")
+                    self.vib_sim_spec_plot.axes.set_xlim(-0.5, pop.shape[2] - 0.5)
+                    self.vib_sim_spec_plot.axes.set_ylim(-0.5, pop.shape[0] - 0.5)
+                    self.vib_sim_spec_plot.axes.set_xlabel("V-state")
+                    self.vib_sim_spec_plot.axes.set_ylabel("J-state")
                     self.vib_sim_spec_plot.draw()
-                    print (pop.shape)
 
             elif self.vib_method == 'int':
 
@@ -3441,9 +3448,22 @@ class TabWidget(QTabWidget):
 
 
                 else:
-                    #TODO HEATMAP PLOT FOR v/j rovib shit
-                    self.rot_sim_spec_plot.axes.cla()
-                    self.rot_sim_spec_plot.axes.scatter(0, 0)
+                    print (pop.shape)
+                    for v_ in range(pop.shape[2]):
+                        for j_ in range(pop.shape[0]):
+                            self.rot_sim_spec_plot.axes.text(j_,
+                                                             v_,
+                                                             round(pop[j_, 1, v_], 3),
+                                                             ha='center',
+                                                             va='center',
+                                                             color=plt.cm.binary(pop[j_, 1, v_]/np.amax(pop[:,1:]))
+                                                             )
+
+                    self.rot_sim_spec_plot.axes.set_title("Population for all States")
+                    self.rot_sim_spec_plot.axes.set_xlim(-0.5, pop.shape[0] - 0.5)
+                    self.rot_sim_spec_plot.axes.set_ylim(-0.5, pop.shape[2] - 0.5)
+                    self.rot_sim_spec_plot.axes.set_xlabel("J-state")
+                    self.rot_sim_spec_plot.axes.set_ylabel("V-state")
                     self.rot_sim_spec_plot.draw()
                 
 
