@@ -1,313 +1,441 @@
-#################################################################################
-#   This is the main file for the VibHam program. This file performs many tasks:
-#       1 - Reads in data file
-#       2 - Converts necessary arrays to SI units
-#       3 - Calls PolyFit to perform a polynomial fit of the curve
-#           Returns the equilibrium bond distance and minimum energy value
-#       4 - Calculates the reduced mass of the diatomic molecule
-#       5 - Calculates the rotational constant
-#       6 - Calls Hamil to popoulate the harmonic, anharmonic, and centrifugal 
-#           potential barrier Hamiltonian Matrices and visualize the wave 
-#           functions 
-#       7 - Calls TDM To calculate all (ro)vibrational excitations
-#       8 - Calls TDM to caculate the spectroscopic constants 
-#       9 - Calls Dunham to calculate to refit the curve to a Dunham
-#            Polynomial
-##################################################################################
+import sys
+import numpy as np
+import pandas as pd
+import random
+import os
+import traceback
+import io
+import csv
+import time
 
+from Conversions import *
+from Atoms import Atoms
+from Interpolate import Interpolate
+from Hamil import Hamil, Wavefunctions
+from Spectra import Spectra
+from Input import Input
+
+class RunVibHam():
+
+    def __init__(self, args):
+        self.args = args
+
+    def BREAK(self):
+        print ("\n\t*****************************************************\n")
+
+    def diagonalize(self, M):
+        '''Function used to diagonalize square matrices or tensors composed of square matrices.'''
+        
+        val = np.zeros((M.shape[:2]))
+        vec = np.zeros((M.shape))
+        for j in range(M.shape[0]):
+            val_, vec_ = np.linalg.eig(M[j])
+            idx = val_.argsort()
+            val[j] = val_[idx]
+            vec[j] = vec_[:,idx].T
+        return val*J_cm, vec
+
+
+    def LoadData(self):
+        if not self.args.Data:
+            print ("MUST GIVE FILE TO READ IN")
+            exit()
+
+        if not os.path.exists(self.args.Data):
+            print ("FILE", self.args.Data, "NOT FOUND")
+            exit()
+
+        try:
+            self.Data = np.loadtxt(self.args.Data).transpose()
+        except:
+            print ("FILE", self.args.Data, "NOT ABLE TO BE READ BY NUMPY")
+            exit()
+
+        print ()
+        print ("\tData file ", self.args.Data, " successfully loaded")
+        print ()
+
+        if self.Data.shape[0] == 2:
+            self.Dip_bool = False
+            
+            print ("\tNo Dipole Moment Information Provided")
+            print ("\tSkipping all TDM calculations\n")
+        
+        elif self.Data.shape[0] == 3:
+            self.Dip_bool = True
+
+            print ("\tDipole Moment Information Provided")
+            print ("\tPerforming all TDM calculations\n")
+
+        self.BREAK()
+    
+    
+    def ConvertData(self):
+        print ("\tConverting bond distance to Angstrom")
+        print ("\tConverting electronic energy to Hartrees")
+
+        if self.args.R_unit == 'ang':
+            self.Data[0] *= 1
+        elif self.args.R_unit == 'bohr':
+            self.Data[0] *= bohr_ang
+        elif args.R_unit == 'm':
+            self.Data[0] *= m_ang
+
+        if self.args.E_unit == 'hartree':
+            self.Data[1]  *= 1
+        elif args.E_unit == 'kj/mol':
+            self.Data[1]  /= kcal_kj
+            slef.Data[1]   /= hart_kcal
+        elif args.E_unit == 'kcal/mol':
+            self.Data[1]   /= hart_kcal
+        elif args.E_unit == 'ev':
+            self.Data[1]   /= hart_eV
+        elif args.E_unit == 'cm':
+            self.Data[1]   /= hart_cm
+        elif args.E_unit == 'j':
+            self.Data[1]   *= J_hart
+            
+        if self.Dip_bool == True:
+            
+            print ("\tConverting dipole moments to Debye")
+            if self.args.Dip_unit == 'debye':
+                self.Data[2]  *= 1
+            elif self.args.Dip_unit == 'au':
+                self.Data[2]  *= au_D
+
+    def AtomicInformation(self):
+
+        if not self.args.Atoms and not self.args.Masses:
+            print ("\tMUST PROVIDE EITHER ATOMS OR MASSES\n")
+            print ("\tQuitting Program\n")
+            exit()
+
+        self.Atoms = Atoms()
+
+        if self.args.Atoms:
+            self.Atom1 = self.Atoms.AtomDict[self.args.Atoms[0]]
+            self.Atom2 = self.Atoms.AtomDict[self.args.Atoms[1]]
+
+            print ()
+            print ("\tAtom 1 - ", self.args.Atoms[0])
+            print ("\tAtom 2 - ", self.args.Atoms[1])
+
+            if not self.args.Isotopes:
+                self.Iso1 = 0
+                self.Iso2 = 0
+
+            else:
+                try:                                
+                    self.Iso1 = self.Atom1[self.args.Isotopes[0]]
+                    self.Iso2 = self.Atom2[self.args.Isotopes[1]]
+                except:
+                    print ("\tIsotope Not Found\n")
+                    print ("\tQuitting Program\n")
+                    exit()
+
+            self.Mass1 = self.Atom1[self.Iso1]
+            self.Mass2 = self.Atom2[self.Iso2]
+
+        elif args.Masses:
+            self.Mass1 = self.args.Masses[0]
+            self.Mass2 = self.args.Masses[1]
+
+        print ()
+        print ("\tMass 1 - ", self.Mass1, "AMU")
+        print ("\tMass 2 - ", self.Mass2, "AMU")
+        print ()
+
+        self.BREAK()
+
+
+    def Interpolate(self):
+
+        inter = Interpolate(temp_data = self.Data,
+                            atoms     = [self.Atom1, self.Atom2],
+                            isotopes  = [self.Iso1, self.Iso2],
+                            masses    = [self.Mass1, self.Mass2],
+                            charge    = self.args.Charge,
+                            numpoints = [self.args.InterPoints, self.args.InterPoints],
+                            order_e   = self.args.Energy_Fit,
+                            order_d   = self.args.Dipole_Fit
+                            )
+
+        print ("\tInterpolating the potential energy curve\n")
+
+        self.rEq = inter.rEq            # Equilibrium Bond Length
+        self.eEq = inter.eEq            # Minimum Energy
+        self.bEq = inter.bEq            # Equilibrium Rotational Constant
+        self.wEq = inter.omega          # Equilbrium Vibrational Constant
+        
+        self.PEC_r = inter.PEC_r_
+        self.PEC_e = inter.PEC_e_
+
+        self.energy_coef = inter.Coef         # Power Series Expansion Coefficients
+
+        self.reduced_mass = inter.reducedMass
+        self.beta         = inter.beta
+        self.nu           = inter.nu
+
+        self.energy_mad = inter.inter_mad
+        self.energy_cod = inter.inter_cod
+        self.energy_rmse = inter.inter_rmse
+
+        print ()
+        print ("\tMinimum energy")
+        print ("\t\t{:<.9f}{:>4s}".format(self.eEq,  "Eh"))
+        print ("\t\t{:<.9f}{:>7s}".format(self.eEq*hart_cm,  "cm^-1"))
+        print ("\t\t{:<.9f}{:>10s}".format(self.eEq*hart_kcal,  "kcal/mol"))
+
+        print ()
+        print ("\tEquilibrium Bond Distance")
+        print ("\t\t{:<.8f}{:>9s}".format(self.rEq, "Angstrom"))
+        print ("\t\t{:<.8f}{:>5s}".format(self.rEq*ang_bohr, "Bohr"))
+        
+        print ()
+        print ("\tEquilibrium vibrational constant")
+        print ("\t\t{:<.9f}{:>7s}".format(self.wEq,  "cm^-1"))
+        print ("\t\t{:<.3f}{:>5s}".format(self.wEq*cm_mhz,  "MHz"))
+
+        print ()
+        print ("\tEquilibrium rotational constant")
+        print ("\t\t{:<.9f}{:>7s}".format(self.bEq,  "cm^-1"))
+        print ("\t\t{:<.3f}{:>6s}".format(self.bEq*cm_mhz,  "MHz"))
+
+        print ()
+        print ("\tReduced Mass")
+        print ("\t\t{:<.9f}{:>6s}".format(self.reduced_mass/amu_kg,  "AMU"))
+
+        print ()
+        print ("\tBeta Value")
+        print ("\t\t{:<.9f}{:>12s}".format(self.beta,  "Angstrom^-1"))
+
+        print ()
+        print ("\tHarmonic Frequency")
+        print ("\t\t{:<.2f}{:>6s}".format(self.nu,  "s^-1"))
+
+        print ("\n")
+        print ("\tMean Absolute Error")
+        print ("\t\t{:<.9f}{:>6s}".format(self.energy_mad,  "Eh"))
+
+        print ()
+        print ("\tRoot Mean Squared Error ")
+        print ("\t\t{:<.9f}{:>6s}".format(self.energy_rmse,  "Eh"))
+
+        print ()
+        print ("\tCoefficient of Determination")
+        print ("\t\t{:<.9f}{:>6s}".format(self.energy_cod,  ""))
+
+        print ("\n")
+        print ("\tPower Series Expansion Coefficients (Hartree/Angstrom^n)\n")
+        for j in range(self.args.Energy_Fit, 1, -1):
+            print ("\t\t{:>3d}{:>5s}{:>15e}".format(j, " -  ", self.energy_coef[self.args.Energy_Fit-j]))
+        print ()
+
+
+        if self.Dip_bool == True:
+            self.BREAK()
+
+            print ("\tInterpolating the dipole curve\n")
+
+            self.dEq         = inter.dEq        # Equilibrium dipole moment value
+            self.dip_mad     = inter.D_mad      # Mean Absolute Error
+            self.dip_cod     = inter.D_cod      # Coefficient of Determination
+            self.dip_rmse    = inter.D_rmse     # Root Mean Squared Error
+            self.dipole_coef = inter.polyDfit   # Coefficients for dipole moment function
+
+    
+            print ()
+            print ("\tEquilibrium Dipole Moment")
+            print ("\t\t{:<.9f}{:>7s}".format(self.dEq,  "Debye"))
+            print ("\t\t{:<.9f}{:>4s}".format(self.dEq*D_au,  "au"))
+
+            print ()
+            print ("\tMean Absolute Error")
+            print ("\t\t{:<.9f}{:>6s}".format(self.dip_mad,  "Debye"))
+
+            print ()
+            print ("\tRoot Mean Squared Error ")
+            print ("\t\t{:<.9f}{:>6s}".format(self.dip_rmse,  "Debye"))
+
+            print ()
+            print ("\tCoefficient of Determination")
+            print ("\t\t{:<.9f}{:>6s}".format(self.dip_cod,  ""))
+
+        
+            print ("\n")
+            print ("\tPower Series Expansion Coefficients (Debye/Angstrom^n)\n")
+            for j in range(0, self.args.Dipole_Fit+1):
+                print ("\t\t{:>3d}{:>5s}{:>15e}".format(j, " -  ", self.dipole_coef[self.args.Dipole_Fit-j]/(D_au/ang_m**j)))
+            print ()
+
+        self.BREAK()
+
+    def GenerateMatrices(self):
+
+        self.maxV = self.args.v
+        self.maxJ = self.args.J
+        
+        print ("\tMaximum Vibrational Quantum Number - ", self.maxV)
+        print ("\tMaximum Rotational Quantum Number  - ", self.maxJ)
+        
+        print ()
+        print ("\tGenerating Harmonic Hamiltonian Matrix")
+        
+        gen_hamil = Hamil(ID   = 'harm',
+                          maxv = self.maxV+1,
+                          nu   = self.nu
+                          )
+
+        self.harmonic = gen_hamil.harmonic
+        np.save("Harmonic_Matrix", self.harmonic)
+        print ("\t\tMatrix saved to 'Harmonic_Matrix.npy'")
+
+        print ()
+        print ("\tGenerating Anharmonic Hamiltonian Matrix")
+
+        gen_hamil = Hamil(ID = 'anharm',
+                              maxV = self.maxV+1,
+                              coef = self.energy_coef,
+                              beta = self.beta
+                              )
+        
+        self.anharmonic = gen_hamil.anharmonic
+        np.save("ANharmonic_Matrix", self.anharmonic)
+        print ("\t\tMatrix saved to 'Anharmonic_Matrix.npy'")
+
+
+        if self.maxJ > 0:
+            print ()
+            print ("\tGenerating Centrifugal Potential Hamiltonian Matrix")
+
+            gen_hamil = Hamil(ID = 'cent',
+                              maxJ = self.maxJ,
+                              maxV = self.maxV+1,
+                              rEq  = self.rEq,
+                              beta = self.beta,
+                              reduced_mass = self.reduced_mass,
+                              Trap = self.args.Trap
+                              )
+
+            self.centrifugal = gen_hamil.centrifugal
+            np.save("Centrifugal_Matrix", self.centrifugal)
+            print ("\t\tMatrix saved to 'Centrifugal_Matrix.npy'")
+
+
+            print ()
+            print ("\tGenerating Total Hamiltonian Matrix")
+
+            self.total = self.harmonic + self.anharmonic + self.centrifugal
+            np.save("Total_Matrix", self.total)
+            print ("\t\tMatrix saved to 'Total_Matrix.npy'")
+
+        
+        else:
+            print ()
+            print ("\tGenerating Total Hamiltonian Matrix")
+
+            self.total = np.zeros((1, self.maxV+1, self.maxV+1))
+            self.total[0] = self.harmonic + self.anharmonic
+            np.save("Total_Matrix", self.total)
+            print ("\t\tMatrix saved to 'Total_Matrix.npy'")
+
+
+        if self.Dip_bool == True:
+            print ()
+            print ("\tGenerating Transition Dipole Moment Hamiltonian Matrix")
+
+            gen_hamil = Hamil(ID = 'tdm',
+                              maxV = self.maxV+1,
+                              coef = self.dipole_coef,
+                              beta = self.beta
+                              )
+
+            self.tdm = gen_hamil.tdm
+            np.save("TDM_Matrix", self.tdm)
+            print ("\t\tMatrix saved to 'TDM_Matrix.npy'")
+
+
+
+        print ()
+        print ("\tChecking Matrix Stability")
+
+        self.total_val, self.total_vec = self.diagonalize(self.total)
+
+        stab_v = self.maxV+1
+        stab_bool = False
+
+        if np.amin(self.total_val.flatten()) < 0:
+            while stab_bool == False:
+                self.total_val, self.total_vec = self.diagonalize(self.total[:, :stab_v, :stab_v])
+
+                if np.amin(self.total_val.flatten()) < 0:
+                    stab_v -= 1 
+                else:
+                    stab_bool = True
+
+
+        print ("\t\tMatrix Stable up to v = ", stab_v-1)
+
+        
+        print ()
+        print ("\tDetermining Convergence of States up to", self.args.EigVal, "cm^-1")
+
+        for j in range(self.maxJ+1):
+            idx = self.total_val[j].argsort()
+            self.total_val[j] = self.total_val[j,idx]
+            self.total_vec[j] = self.total_vec[j, :, idx]
+
+        self.total_val_, self.total_vec_ = self.diagonalize(self.total[:, :stab_v-1, :stab_v-1])
+
+        for j in range(self.maxJ+1):
+            idx = self.total_val_[j].argsort()
+            self.total_val_[j] = self.total_val_[j,idx]
+            self.total_vec_[j] = self.total_vec_[j, :, idx]
+    
+        self.trunc_arr = np.zeros((self.maxJ+1))
+        for j in range(self.maxJ+1):
+            diff_arr = self.total_val_[j] - self.total_val[j,:-1]
+            trunc_val = np.where(diff_arr < self.args.EigVal)[0].flatten()[-1]
+            self.trunc_arr[j] = trunc_val
+
+            print ("\t\tEigenvalues converged up to v = ", trunc_val, "on the J = ", j, "surface")
+
+        self.BREAK()
+
+    def TurningPoints(self):
+        tps = Spectra()
+
+        self.tps = np.zeros((self.maxJ+1, 2, self.maxV+1))
+
+        for j in range(self.maxJ+1):
+
+            self.tps[j] = tps.TurningPoints(self.PEC_r+self.rEq,
+                                            self.PEC_e*hart_cm,
+                                            self.total_val[j],
+                                            self.rEq,
+                                            )
+
+    def PrintEigen(self):
+        self
 
 def Main():
 
-    start = time.time()     # Value of inital time
+    start = time.time()
 
-    args = Input()          # Input Parser
+    args = Input()
 
-    Dip_Check = False       # Check to perform dipole moment calculations
+    VibHam = RunVibHam(args)
 
-    ########################################################################
-    # Load the Datasets and Initialize arrays                               
-    #                                                                       
-    # Re    - Bond distance data for electronic energy                      
-    #       - May be given in Angstrom, bohr, or meters                     
-    #                                                                       
-    # Rd    - Bond distance data for dipole moment                          
-    #       - May be given in Angstrom, bohr, or meters                     
-    #                                                                       
-    # E     - Electronic Energy Data                                        
-    #       - May be given in Hartree, kcal/mol, kj/mol, wavenumbers, eV    
-    #                                                                       
-    # D     - Dipole Moment Data                                            
-    #       - May be given in Debye or au                                   
-    ########################################################################
-
-    if not args.Data:
-        print ("MUST GIVE FILE TO READ IN")
-        exit()
-
-    if not os.path.exists(args.Data):
-        print ("FILE", args.Data, "NOT FOUND")
-        exit()
-
-    try:
-        Data = np.loadtxt(args.Data).transpose()
-    except:
-        print ("FILE", args.Data, "NOT ABLE TO BE READ BY NUMPY")
-        exit()
-
-    Data = Data[:,np.argsort(Data[0,:])]        # Sort datafile matrix by increasing bond distance values
-
-    Re = Data[0].copy()     # Array of bond distance information to be used for vibrational Hamiltonian
-    Rd = Data[0].copy()     # Array f bond distance information to be used for dipole moment
-    E  = Data[1].copy()     # Array of energy values
-
-    if Data.shape[0] == 2:
-        D  = np.zeros((1))      # Empty array for dipole moment function
-        Dip_Check = False       # Boolean check for no dipole information
-
-    elif Data.shape[0] == 3:
-        D  = Data[2].copy()     # Array for dipole moment function
-        Dip_Check = True        # Boolean check for dipole information
-
-    print ()
-    print ("\tData file ", args.Data, " successfully loaded")
-    print ()
-
-    #############################################################
-    # If no dipole data is give, then skip all TDM calculations 
-    #############################################################
-
-    if Dip_Check == False:
-        print ("\tNo Dipole Moment Information Provided")
-        print ("\tSkipping all TDM calculations\n")
-
-    #####################################
-    # Converts:                         
-    #   Bond Distance to meters         
-    #   Electronic Energy to Joules     
-    #   Dipole Moment to atomic units   
-    #####################################
-
-    print ("\tConverting bond distance to meters")
-    print ("\tConverting electronic energy to joules")
-
-    if args.R_unit == 'ang':
-        Re *= ang_m
-    elif args.R_unit == 'bohr':
-        Re *= bohr_m
-    elif args.R_unit == 'm':
-        Re
-
-    if args.E_unit == 'hartree':
-        E       *= hart_J
-    elif args.E_unit == 'kj/mol':
-        E       *= kj_J
-    elif args.E_unit == 'kcal/mol':
-        E       *= kcal_J
-    elif args.E_unit == 'ev':
-        E       *= eV_J
-    elif args.E_unit == 'cm':
-        E       *= cm_J
-    elif args.E_unit == 'j':
-        E
-
-    if Dip_Check == True:
-        print ("\tConverting dipole moments to atomic units")
-        if args.R_unit == 'ang':
-            Rd *= ang_m
-        elif args.R_unit == 'bohr':
-            Rd *= bohr_m
-        elif args.R_unit == 'm':
-            Rd
-        
-        if args.Dip_unit == 'debye':
-            D *= D_au
-        elif args.Dip_unit == 'au':
-            D
-
-    ############################################
-    # Standard polynomial Fit for the EST Data 
-    #   Variables:
-    #       Re - array of bond distances
-    #       E  - array of energy values
-    #   Returns
-    #       R_eq  - equilibrium bond distances
-    #       R_min - equilibrium energy
-    ############################################
-
-    BREAK()
-    R_eq, E_min = PF(Re, E, args)
-    
-    ##############################
-    # Calculate the reduced mass 
-    ##############################
-
-    if not args.Atoms and not args.Masses:
-        print ("\tMUST PROVIDE EITHER ATOMS OR MASSES\n")
-        print ("\tQuitting Program\n")
-        exit()
-
-    if args.Atoms:
-        if not args.Isotopes:
-            Atom1 = Atoms(args.Atoms[0], 0)     # Assign mass to atom 1 given most stable isotope
-            Atom2 = Atoms(args.Atoms[1], 0)     # Assign mass to atom 2 given most stable isotope
-        else:
-            try:                                # Try to assign given isotoped to Atom 1
-                Atom1 = Atoms(args.Atoms[0], args.Isotopes[0])
-            except:
-                print ("\tIsotope ", args.Atoms[0], args.Isotopes[0], "Not Found\n")
-                print ("\tQuitting Program\n")
-                exit()
-
-            try:                                # Try to assign given isotoped to Atom 2
-                Atom2 = Atoms(args.Atoms[1], args.Isotopes[1])
-            except:
-                print ("\tIsotope ", args.Atoms[1], args.Isotopes[1], "Not Found\n")
-                print ("\tQuitting Program\n")
-                exit()
-
-    elif args.Masses:               # Assign masses using user given values
-        Atom1 = args.Masses[0]
-        Atom2 = args.Masses[1]
-
-    r_mass = ((Atom1 * Atom2) / (Atom1 + Atom2))    # Reduced mass in amu
-
-    print ("\tReduced Mass")
-    print ("\t\t{:>.9e} amu".format(r_mass))
-    print ("\t\t{:>.9e} kg".format(r_mass*amu_kg))
-    print ()
-
-    ####################################
-    # Calculate the Rotational Constant 
-    ####################################
-
-    Be = h / (8 * np.pi**2 * c_cm * (r_mass*amu_kg) *  R_eq**2)
-    
-    print ("\tRotational Constant")
-    print ("\t\t{:>.9e} cm^-1".format(Be))
-    print ("\t\t{:>.9e} MHz".format(Be*cm_mhz))
-    print ()
-
-    #####################################
-    # Vibrational Hamiltonian Functions 
-    #   Variables:
-    #       Re     - array of bond distance values
-    #       E      - array of energy values
-    #       R_eq   - equilibrium bond distance
-    #       E_min  - equilibrium bond energy
-    #       r_mass - reduced mass
-    #       args   - input arguments
-    #   Returns:
-    #       H        - Hamiltonian Tensor
-    #       beta     - beta value for diatomic
-    #       MaxLevel - Maximum converged energy level
-    #       Vals     - Eigenvalues
-    #       Vecs     - Eigenvectors
-    #       nu       - vibrational constant in s^-1
-    #####################################
-
-    BREAK()
-    H, beta, MaxLevel, Vals, Vecs, nu = Hamil(Re, E, R_eq, E_min, r_mass, args)
-
-    ########################################################################
-    # Calculate Transition Dipole Moment Matrix if dipole moment is provided 
-    #   Variables:
-    #       Rd-R_eq         - array of bond distances shifted by R_eq
-    #       D               - array of dipole moment values
-    #       R_eq            - equilibrium bond distance
-    #       beta            - beta value for diatomic
-    #       Vals.shape[1]   - Size of dipole moment matrix to construct
-    #       args            - input arguments
-    ########################################################################
-
-    if Dip_Check == True:
-        BREAK()
-        tdm = TDM(Rd-R_eq, D, R_eq, beta, Vals.shape[1], args)
-    else:
-        tdm = np.ones((Vals.shape[0], Vals.shape[0]))
-
-    ########################################################################
-    # Calculate all excitations using the converged energy levels 
-    #   Variables:
-    #       Rd-R_eq   - array of bond distances shifted by R_eq
-    #       D         - array of dipole moment values
-    #       R_eq      - equilibrium bond distance
-    #       beta      - beta value for diatomic
-    #       H         - Hamiltonian Matrices
-    #       Vals      - Eigenvalues
-    #       Vecs      - Eigenvectors
-    #       MaxLevel  - Maximum converged energy level
-    #       Dip_Check - Boolean if Dipole moment information provided
-    #       args      - input arguments
-    ########################################################################
-    
-    BREAK()
-    Excitations(Vals, Vecs, MaxLevel+1, Dip_Check, tdm, args)
-
-    #########################################################
-    # Calculate Spectroscopic Constants 
-    #   Variables:
-    #       R_eq/ang_m  - Equilibrium bond distance in angstrom
-    #       Vals        - Eigenvalues
-    #       args        - input arguments
-    ##########################################################
-
-    BREAK()
-    Constants(Vals[:,:MaxLevel+1], args)
-
-    ##########################################
-    # Calculate Dunham Polynomial Fit 
-    #   Variables:
-    #       Re - array of bond distances
-    #       R_eq - equilibrium bond distance
-    #       E - array of energy values
-    #       E_min - equilibrium bond energy
-    #       nu - vibrational constant in s^-1
-    #       r_mass - reduced mass in kg
-    ###########################################
-
-    BREAK()
-    Dunham(Re, R_eq, E, E_min, nu, r_mass*amu_kg)
-
-    BREAK()
-
-    minutes, seconds = divmod(time.time() - start, 60)
-    print ("\tEnd of Program - ", "%d minutes, %d seconds" %(minutes, seconds), "\n")
-
-    exit()
-
+    VibHam.LoadData()
+    VibHam.ConvertData()
+    VibHam.AtomicInformation()
+    VibHam.Interpolate()
+    VibHam.GenerateMatrices()
+    VibHam.TurningPoints()
+    VibHam.PrintEigen()
 
 if __name__ == "__main__":
 
-    try:                            # Try to import all necessary python libraries
-        import numpy as np
-        import math
-        import os
-        import matplotlib.pyplot as plt
-        from scipy.integrate import quad 
-        from scipy.special import hermite
-        from scipy.optimize import curve_fit
-        from math import factorial as fac
-        import argparse
-        import warnings
-        import time
-    except:
-        print ("One or more of the following python libraries is not currently installed:")
-        print ("\tnumpy\n\tmath\n\tos\n\tmatplotlib\n\tscipy\n\targparse\n\twarning\n\ttime")
-        exit()
-    
-    try:                           # Try to load all necessary python files
-        from Conversions import *
-        from Input       import Input
-        from Atoms       import Atoms   
-        from PolyFit     import PolyFit as PF
-        from Hamil       import Hamil
-        from Spec        import TDM, Excitations, Constants
-        from Dunham      import Dunham
-        
-    except:
-        print ("One or more of the following files is not currently available:")
-        print ("\tConversions.py\n\tInput.py\n\tAtoms.py\n\tPolyFit\n\tHamil\n\tSpec\n\tDunham")
-        exit()
 
     Main()
 
