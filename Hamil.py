@@ -336,17 +336,17 @@ class Hamil():
 
         for v in range(self.maxV):                           
             N_i = self.__Norm(v)                              
-            H_i = self.__Hermite(v)                          
+            H_i = self.__Hermite(v)      
 
             for vv in range(v, self.maxV):                   
                 N_j = self.__Norm(vv)                        
                 H_j = self.__Hermite(vv)                     
 
-                inte = 0.                                    
-            
+                inte = 0.        
+
                 for n in range(len(self.Dcoef)):             
                     mu = self.Dcoef[-1 - n] * ang_m**n       
-                    
+
                     for i in range(H_i.size):                
                         if H_i.size == 1:           
                             Hi = H_i                
@@ -366,9 +366,10 @@ class Hamil():
                                         Bval = 1./ (self.beta**(n + 1))   
                                         Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2))) 
                                         inte += mu * Hval * Bval * Fval * np.sqrt(np.pi) 
-                
+
                 H[v, vv] = inte * N_i * N_j             
-                H[vv, v] = inte * N_i * N_j         
+                H[vv, v] = inte * N_i * N_j        
+
 
         return H
 

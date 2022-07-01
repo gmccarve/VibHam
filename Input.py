@@ -26,6 +26,27 @@ def Input():
                         type=str,
                         )
 
+    parser.add_argument('-Atoms',
+                        action='store',
+                        help='Atomic Species (2)',
+                        type=str.upper,
+                        nargs=2,
+                        )
+
+    parser.add_argument('-Masses',
+                        action='store',
+                        help='Atomic Masses (2)',
+                        type=float,
+                        nargs=2,
+                        )
+
+    parser.add_argument('-Isotopes',
+                        action='store',
+                        help='Isotopes to use (2)',
+                        type=int,
+                        nargs=2,
+                        )
+
     parser.add_argument('-R_unit',
                         action='store',
                         help='Units for Bond Distance',
@@ -50,55 +71,12 @@ def Input():
                         default='debye'
                         )
 
-    parser.add_argument('-Atoms',
-                        action='store',
-                        help='Atomic Species (2)',
-                        type=str.upper,
-                        nargs=2,
-                        )
-
-    parser.add_argument('-Masses',
-                        action='store',
-                        help='Atomic Masses (2)',
-                        type=float,
-                        nargs=2,
-                        )
-
-    parser.add_argument('-Isotopes',
-                        action='store',
-                        help='Isotopes to use (2)',
-                        type=int,
-                        nargs=2,
-                        )
-
-    parser.add_argument('-E_Fit_Error',
-                        action='store',
-                        help='Maximum Error for Polynomial Fit for Electronic Energy (microHartree)',
-                        type=float,
-                        default=25
-                        )
-
-    parser.add_argument('-Dip_Fit_Error',
-                        action='store',
-                        help='Maximum Error for the Polynomial Fit for Dipole Moment (mD)',
-                        type=float,
-                        default=1
-                        )
-
-    parser.add_argument('-Vib_Fit',
+    parser.add_argument('-Energy_Fit',
                         action='store',
                         help='Degree of Polynomial Fit for Electronic Energy According to V(R-R_eq). Even Values Only',
                         type=int,
-                        default=0,
-                        choices=[0, 2, 4, 6, 8, 10, 12, 14, 16]
-                        )
-
-    parser.add_argument('-Poly_Fit',
-                        action='store',
-                        help='Degree of Standard Polynomial Fit for Electronic Energy',
-                        type=int,
-                        default=0,
-                        choices=np.arange(0, 12)
+                        default=2,
+                        choices=[2, 4, 6, 8, 10, 12, 14, 16]
                         )
 
     parser.add_argument('-Dipole_Fit',
@@ -115,19 +93,6 @@ def Input():
                         type=float,
                         default=0.1
                         )
-
-    parser.add_argument('-PsiConv',
-                        action='store',
-                        help='Convergence value for the Wavefunctions (%% of ab initio data)',
-                        type=float,
-                        default=0.001
-                        )
-
-    parser.add_argument('-PlotWF',
-                        action='store_true',
-                        help='Plot all Wavefunctions for all J-values',
-                        )
-
 
     parser.add_argument('-J',
                         action='store',
@@ -150,12 +115,6 @@ def Input():
                         default=20
                         )
 
-    parser.add_argument('-Plot',
-                        action='store_true',
-                        help='Choice to plot functions',
-                        default=False
-                        )
-
     parser.add_argument('-Print',
                         action='store',
                         help='Print level (1 - Converged Values, 2 - Converged Values + Vectors, 3 - All Values, 4 - All Values + Vecotrs)',
@@ -164,10 +123,6 @@ def Input():
                         default=1
                         )
     
-    parser.add_argument('-Test',
-                        action='store_true'
-                        )
-
     parser.add_argument('-Charge',
                         action='store',
                         help='Charge of Molecule',
@@ -175,18 +130,11 @@ def Input():
                         default=0
                         )
 
-    parser.add_argument('-Anharm',
-                        action='store',
-                        help='Percentage of Anharmonicity to include in the Total Hamiltonian Matrix',
-                        type=float,
-                        default=100
-                        )
-
-    parser.add_argument('-Accuracy',
+    parser.add_argument('-InterPoints',
                         action='store',
                         help='Accuracy of polynomial fit',
                         type=int,
-                        default=100000
+                        default=10000
                         )
 
     parser.add_argument('-Constants',
@@ -195,6 +143,21 @@ def Input():
                         type=int,
                         default=3
                         )
+
+    parser.add_argument('-LoadData',
+                        action='store_true'
+                        )
+
+    parser.add_argument('-Interactive',
+                        action='store_true'
+                        )
+
+    parser.add_argument('-i',
+                        action='store_true'
+                        )
+
+
+
 
 
     return parser.parse_args()

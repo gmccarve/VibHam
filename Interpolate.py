@@ -288,5 +288,5 @@ class Interpolate():
         self.k      = self.Coef[0] * 2
         self.nu     = np.sqrt(self.k/self.reducedMass)
         self.omega  = self.nu /  ( 2 * np.pi * c_cm)
-
+        self.beta   = (((self.reducedMass * self.k) ** 0.25) / (h_bar**0.5)) * ang_m
 

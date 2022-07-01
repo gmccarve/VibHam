@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import numpy as np
 import pandas as pd
@@ -12,6 +14,7 @@ from Atoms import Atoms
 from Interpolate import Interpolate
 from Hamil import Hamil, Wavefunctions
 from Spectra import Spectra
+from Windows import *
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
@@ -21,10 +24,13 @@ from PyQt5.QtCore import Qt, QEvent, QAbstractTableModel, QRect, QPoint, QObject
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
+
 class MainWindow(QMainWindow):
     '''Main window of the VibHam application'''
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
+
+        self.showMaximized()
 
         self._tabwidget = TabWidget(self)
         self.setCentralWidget(self._tabwidget)
@@ -247,22 +253,21 @@ class TabWidget(QTabWidget):
 
         # Define the atoms
 
-        self.element_lab = QLabel("Element")
+        self.element_lab = QPushButton("Elements")
+        self.element_lab.clicked.connect(self.__elementsWindow)
         self.element_lab.setToolTip("Atoms in periodic order")
 
-        self.atom1_box = QComboBox()
-        self.atom1_box.setStyleSheet("QComboBox { combobox-popup: 0}")
-        self.atom1_box.setMaxVisibleItems(10)
-        self.atom1_box.addItems(self.Atoms.AtomDict.keys())
-        self.atom1_box.currentIndexChanged.connect(self.__atom1_combo_selected)
-        self.atom1_box.setFixedWidth(100)
+        self.atom1_id = QLineEdit("")
+        self.atom1_id.setFixedWidth(100)
+        self.atom1_id.textChanged.connect(self.__atom1_id_changed)
+        self.atom1_id.textChanged.connect(self.__iso1_combo_selected)
+        self.atom1_id.textChanged.connect(self.__mass1_str_changed)
 
-        self.atom2_box = QComboBox()
-        self.atom2_box.setStyleSheet("QComboBox { combobox-popup: 0}")
-        self.atom2_box.setMaxVisibleItems(10)
-        self.atom2_box.addItems(self.Atoms.AtomDict.keys())
-        self.atom2_box.currentIndexChanged.connect(self.__atom2_combo_selected)
-        self.atom2_box.setFixedWidth(100)
+        self.atom2_id = QLineEdit("")
+        self.atom2_id.setFixedWidth(100)
+        self.atom2_id.textChanged.connect(self.__atom2_id_changed)
+        self.atom2_id.textChanged.connect(self.__iso2_combo_selected)
+        self.atom2_id.textChanged.connect(self.__mass2_str_changed)
 
         # Define the Isotopes
 
@@ -361,8 +366,8 @@ class TabWidget(QTabWidget):
     
         row+=1
         self.tab1.grid_layout.addWidget(self.element_lab, row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.atom1_box, row, 1, 1, 2)
-        self.tab1.grid_layout.addWidget(self.atom2_box, row, 3, 1, 2)
+        self.tab1.grid_layout.addWidget(self.atom1_id, row, 1, 1, 2)
+        self.tab1.grid_layout.addWidget(self.atom2_id, row, 3, 1, 2)
     
         row+=1
         self.tab1.grid_layout.addWidget(self.iso_lab, row, 0, alignment=Qt.AlignCenter)
@@ -425,8 +430,9 @@ class TabWidget(QTabWidget):
         self.mass1 = self.atom1[self.iso1]
         self.mass2 = self.atom2[self.iso2]
 
-        self.atom1_box.setCurrentText("C")
-        self.atom2_box.setCurrentText("O")
+        self.atom1_id.setText("C")
+        self.atom2_id.setText("O")
+
         self.__iso1_combo_selected()
         self.__iso2_combo_selected()
         self.__mass1_str_changed()
@@ -454,8 +460,8 @@ class TabWidget(QTabWidget):
         self.mass1 = self.atom1[self.iso1]
         self.mass2 = self.atom2[self.iso2]
 
-        self.atom1_box.setCurrentText("H")
-        self.atom2_box.setCurrentText("F")
+        self.atom1_id.setText("H")
+        self.atom2_id.setText("F")
         self.__iso1_combo_selected()
         self.__iso2_combo_selected()
         self.__mass1_str_changed()
@@ -592,30 +598,51 @@ class TabWidget(QTabWidget):
             except:
                 self.errorText = "Plot could not be constructed\n\n" + str(traceback.format_exc())
                 self.__openErrorMessage()
-    
-    def __atom1_combo_selected(self):
-        '''Activated following a change in the combo box for the identify of atom 1'''
-        self.atom1 = self.Atoms.AtomDict[self.atom1_box.currentText()]
-        
-        self.iso1_box.clear()
-        self.iso1_box.addItems([str(e) for e in self.atom1])
-        self.iso1 = self.iso1_box.currentText()
-        
-        self.mass1_str.clear()
-        self.mass1 = self.atom1[int(self.iso1)]
-        self.mass1_str.setText(str(round(self.mass1, 8)))
 
-    def __atom2_combo_selected(self):
-        '''Activated following a change in the combo box for the identify of atom 2'''
-        self.atom2 = self.Atoms.AtomDict[self.atom2_box.currentText()]
-        
-        self.iso2_box.clear()
-        self.iso2_box.addItems([str(e) for e in self.atom2])
-        self.iso2 = self.iso2_box.currentText()
-    
-        self.mass2_str.clear()
-        self.mass2 = self.atom2[int(self.iso2)]
-        self.mass2_str.setText(str(round(self.mass2, 8)))
+
+    def __elementsWindow(self):
+        self.c = ElementWindow()
+        self.c.signal.connect(self.__change_atoms_)
+        self.c.show()
+
+    def __change_atoms_(self, atom1, atom2):
+        self.atom1_id.setText(atom1)
+        self.atom2_id.setText(atom2)
+
+    def __atom1_id_changed(self):
+        '''Activated following a change for atom 1'''
+        try:
+            self.atom1 = self.Atoms.AtomDict[self.atom1_id.text()]
+
+            self.iso1_box.clear()
+            self.iso1_box.addItems([str(e) for e in self.atom1])
+            self.iso1 = self.iso1_box.currentText()
+
+            self.mass1_str.clear()
+            self.mass1 = self.atom1[int(self.iso1)]
+            self.mass1_str.setText(str(round(self.mass1, 8)))
+
+        except:
+            self.errorText = "Atom not found"
+            self.__openErrorMessage()
+
+    def __atom2_id_changed(self):
+        '''Activated following a change of atom 2'''
+        try:
+            self.atom2 = self.Atoms.AtomDict[self.atom2_id.text()]
+
+            self.iso2_box.clear()
+            self.iso2_box.addItems([str(e) for e in self.atom2])
+            self.iso2 = self.iso2_box.currentText()
+
+            self.mass2_str.clear()
+            self.mass2 = self.atom1[int(self.iso2)]
+            self.mass2_str.setText(str(round(self.mass2, 8)))
+
+        except:
+            self.errorText = "Atom not found"
+            self.__openErrorMessage()
+
 
     def __iso1_combo_selected(self):
         '''Activated following a change in the combo box for the identify of isotope 1'''
@@ -677,6 +704,16 @@ class TabWidget(QTabWidget):
         self.charge = self.charge_box.value()
 
 
+    def __elementsWindow(self):
+        self.c = ElementWindow()
+        self.c.signal.connect(self.__change_atoms_)
+        self.c.show()
+
+    def __change_atoms_(self, atom1, atom2):
+        self.atom1_id.setText(atom1)
+        self.atom2_id.setText(atom2)
+
+
 
     def __PowerSeriesExpansionTab(self):
 
@@ -707,7 +744,7 @@ class TabWidget(QTabWidget):
 
         # Initialize some of the variables
 
-        self.pec_order = 10         # Order of power series expansion
+        self.pec_order = 8         # Order of power series expansion
         self.dip_order = 5          # Order of dipole moment function
         self.pec_inter_pts = 10000  # Number of interpolation points for potential energy curve
         self.dip_inter_pts = 10000  # Number of interpolation points for dipole moment function
@@ -1070,6 +1107,10 @@ class TabWidget(QTabWidget):
 
             convert_units()
 
+            idx = self.temp_data[0].argsort()
+            self.temp_data = self.temp_data[:,idx]
+            
+
             if self.temp_data.shape[1] < int(self.pec_order) or self.temp_data.shape[1] < int(self.dip_order):
                 self.errorText = 'Order of power series must be less than the number of data points '
                 self.__openErrorMessage()
@@ -1085,7 +1126,6 @@ class TabWidget(QTabWidget):
                                 order_e   = int(self.pec_order),
                                 order_d   = int(self.dip_order)
                                 )
-
 
             if self.data.shape[0] == 3:
                 '''Dipole data provided'''
@@ -1161,6 +1201,7 @@ class TabWidget(QTabWidget):
 
     def __energy_coefficients(self):
         '''Open an external table to view the power series expansion coefficients for the energy curve'''
+        #TODO CHECKK UNITS
         try:
             self.coef_win.close()
         except:
@@ -1174,6 +1215,7 @@ class TabWidget(QTabWidget):
 
     def __dipole_coefficients(self):
         '''Open an external table to view the power series expansion coefficients for the dipole curve'''
+        #TODO CHECK UNITS
         try:
             self.coef_win.close()
         except:
@@ -1309,7 +1351,7 @@ class TabWidget(QTabWidget):
 
         # Initialize some of the variables
 
-        self.maxV = 20          # Maximum vibrational quantum number
+        self.maxV = 25          # Maximum vibrational quantum number
         self.maxJ = 10          # Maximum rotational quantum number
 
         self.harmonic    = np.zeros((self.maxV+1, self.maxV+1))                 # Initial harmonic matrix
@@ -2524,6 +2566,7 @@ class TabWidget(QTabWidget):
         try:
             self.total_val, self.total_vec = self.__diagonalize(self.total)
             excite = Spectra()
+
             self.excitations = excite.Excitations(self.total_val, 
                                                   self.total_vec, 
                                                   int(self.max_trunc_val), 
@@ -3687,861 +3730,6 @@ class TabWidget(QTabWidget):
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
-
-
-
-class PlotCurve_111(FigureCanvasQTAgg):
-    '''Class used to construct a single matplotlib plot'''
-
-    def __init__(self, Parent=None, dpi=100):
-        fig = Figure(dpi=dpi, tight_layout=True)
-        self.axes = fig.add_subplot(111)
-        super(PlotCurve_111, self).__init__(fig)
-
-class PlotCurve_212(FigureCanvasQTAgg):
-    '''Class used to construct side-by-side matplotlib plots'''
-
-    def __init__(self, Parent=None, dpi=100):
-        fig = Figure(dpi=dpi, tight_layout=True)
-        self.axes1 = fig.add_subplot(211)
-        self.axes2 = fig.add_subplot(212)
-        super(PlotCurve_212, self).__init__(fig)
-
-class PandasModel(QAbstractTableModel):
-    '''Class used to open and populate external datatables'''
-
-    def __init__(self, data, edit):
-        super().__init__()
-        self._data = data
-        self._edit = edit
-
-    def rowCount(self, index):
-        return self._data.shape[0]
-
-    def columnCount(self, parnet=None):
-        return self._data.shape[1]
-
-    def data(self, index, role=Qt.DisplayRole):
-        if index.isValid():
-            if role == Qt.DisplayRole or role == Qt.EditRole:
-                value = self._data.iloc[index.row(), index.column()]
-                return str(value)
-
-    def setData(self, index, value, role):
-        if role == Qt.EditRole:
-            self._data.iloc[index.row(), index.column()] = value
-            return True
-        return False
-
-    def headerData(self, col, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self._data.columns[col]
-
-    def flags(self, index):
-        if self._edit == True:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-        else:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-    
-
-class CoefficientWindow(QWidget):
-    '''Class used to open and populate an external window to display power series
-       coefficient data'''
-
-    def __init__(self, coef, val):
-        super(CoefficientWindow, self).__init__()
-
-        self.resize(400, 400)
-
-        if val == 'energy':
-            self.setWindowTitle("Power Series Coefficients")
-            self.coef = coef
-
-            cc = np.zeros((coef.size))
-
-            for j in range(cc.size):
-                cc[j] = self.coef[j] * ang_m**(j+2) / hart_J
-
-
-            self.df = pd.DataFrame({"Order (n)" : np.arange(0, self.coef.size)+2,
-                                    "Value (j/m^n)" : self.coef,
-                                    "Value (Hartree/Ang^n)" : cc
-                                    })
-
-        elif val == 'dipole':
-            self.setWindowTitle("Dipole Momemnt Coefficients")
-            self.coef = coef
-
-            cc = np.zeros((coef.size))
-
-            for j in range(cc.size):
-                cc[j] = self.coef[j] * ang_m**j * D_au
-
-
-            self.df = pd.DataFrame({"Order (n)" : np.arange(0, self.coef.size),
-                                    "Value (au/m^n)" : cc,
-                                    "Value (D/Ang^n)" : self.coef
-                                    })
-
-        self.table = QTableView()
-        self.table.installEventFilter(self)
-        self.model = PandasModel(self.df, edit=False)
-        self.table.setModel(self.model)
-        vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.table)
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def eventFilter(self, source, event):
-        '''Function used to copy cells from an external datatable'''
-        if (event.type() == QEvent.KeyPress and
-            event.matches(QKeySequence.Copy)):
-            self.copySelection()
-            return True
-        return super(CoefficientWindow, self).eventFilter(source, event)
-
-    def copySelection(self):
-        '''Function used to copy cells from an external datatable'''
-        selection = self.table.selectedIndexes()
-        if selection:
-            rows = sorted(index.row() for index in selection)
-            columns = sorted(index.column() for index in selection)
-            rowcount = rows[-1] - rows[0] + 1
-            colcount = columns[-1] - columns[0] + 1
-            table = [[''] * colcount for _ in range(rowcount)]
-            for index in selection:
-                row = index.row() - rows[0]
-                column = index.column() - columns[0]
-                table[row][column] = index.data()
-            stream = io.StringIO()
-            csv.writer(stream).writerows(table)
-            qApp.clipboard().setText(stream.getvalue())
-
-class InterpolationErrorWindow(QWidget):
-    '''Class used to open and populate an external datatable that displayes
-        the error of interpolation for both the energy and dipole curves'''
-
-    def __init__(self, R, error, val):
-        super(InterpolationErrorWindow, self).__init__()
-
-        self.R = R
-        self.error = error
-        self.val = val
-
-        self.resize(800, 400)
-
-        if val == 'energy':
-            self.setWindowTitle("Error of Energy Interpolation")
-            self.df = pd.DataFrame({"Bond Displacement (Å) " :  self.R,
-                                   "Error (Hartrees) " : self.error,
-                                   "Error (J) " : self.error * hart_J,
-                                   "Error (eV) " : self.error * hart_eV,
-                                   "Error (cm^-1) " : self.error * hart_cm,
-                                   "Error (kcal/mol) " : self.error * hart_kcal
-                                   })
-
-        elif val == 'dipole':
-            self.setWindowTitle("Error of Dipole Moment Interpolation")
-            self.df = pd.DataFrame({"Bond Displacement (Å) " :  self.R,
-                                   "Error (D) " : self.error,
-                                   "Error (au) " : self.error * D_au
-                                   })
-
-        self.table = QTableView()
-        self.table.installEventFilter(self)
-        self.model = PandasModel(self.df, edit=False)
-        self.table.setModel(self.model)
-        vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.table)
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def eventFilter(self, source, event):
-        '''Function used to copy cells from an external datatable'''
-        if (event.type() == QEvent.KeyPress and
-            event.matches(QKeySequence.Copy)):
-            self.copySelection()
-            return True
-        return super(InterpolationErrorWindow, self).eventFilter(source, event)
-
-    def copySelection(self):
-        '''Function used to copy cells from an external datatable'''
-        selection = self.table.selectedIndexes()
-        if selection:
-            rows = sorted(index.row() for index in selection)
-            columns = sorted(index.column() for index in selection)
-            rowcount = rows[-1] - rows[0] + 1
-            colcount = columns[-1] - columns[0] + 1
-            table = [[''] * colcount for _ in range(rowcount)]
-            for index in selection:
-                row = index.row() - rows[0]
-                column = index.column() - columns[0]
-                table[row][column] = index.data()
-            stream = io.StringIO()
-            csv.writer(stream).writerows(table)
-            qApp.clipboard().setText(stream.getvalue())
-
-class StabilityWindow(QWidget):
-    '''Class used to open an external window to detail the stability of the 
-        constructed total Hamiltonian matrix'''
-
-    def __init__(self, trunc, val):
-        super(StabilityWindow, self).__init__()
-
-        self.trunc = trunc
-        self.val = val
-
-        self.setWindowTitle("Stability of Hamiltonian Matrix")
-        self.resize(400, 50)
-
-        self.layout = QVBoxLayout()
-
-        if val == 1:
-            self.label = QLabel("Matrix stable ν = " + str(self.trunc))
-        else:
-            self.label = QLabel("Matrix not stable beyond ν = " + str(self.trunc))
-
-        self.label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.label)
-        self.setLayout(self.layout)
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-class MatrixWindow(QWidget):
-    '''Class used to populate and open an external datatable that displays
-        one of the constructed Hamiltonian matrices.
-
-        If the matrix is J-dependent, an initial window is opened asking 
-        about the J-surface to display.'''
-
-    def __init__(self, *args, **kwargs):
-        super(MatrixWindow, self).__init__()
-
-        self.matrix = kwargs['matrix']
-        self.val    = kwargs['val']
-
-        self.resize(1000,1000)
-    
-        if 'J' in kwargs:
-            if kwargs['J'] != 0:
-                self.askJ = MatrixWindow_AskJ(J=kwargs['J'],
-                                              matrix=self.matrix,
-                                              val=self.val)
-                self.askJ.show()
-            else:
-                self.setWindowTitle(self.val.upper())
-
-                self.df = pd.DataFrame()
-
-                for v in range(self.matrix.shape[0]):
-                    self.df['ν = ' + str(v)] = self.matrix[v,:]
-
-                self.df = self.df.round(decimals=7)
-
-                self.table = QTableView()
-                self.table.installEventFilter(self)
-                self.model = PandasModel(self.df, edit=False)
-                self.table.setModel(self.model)
-                vlayout = QVBoxLayout(self)
-                vlayout.addWidget(self.table)
-                self.show()
-        else:
-            self.setWindowTitle(self.val.upper())
-
-            self.df = pd.DataFrame()
-
-            for v in range(self.matrix.shape[0]):
-                self.df['ν = ' + str(v)] = self.matrix[v,:]
-
-            self.df = self.df.round(decimals=7)
-
-            self.table = QTableView()
-            self.table.installEventFilter(self)
-            self.model = PandasModel(self.df, edit=False)
-            self.table.setModel(self.model)
-            vlayout = QVBoxLayout(self)
-            vlayout.addWidget(self.table)
-            self.show()
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def eventFilter(self, source, event):
-        '''Function used to copy cells from an external datatable'''
-        if (event.type() == QEvent.KeyPress and
-            event.matches(QKeySequence.Copy)):
-            self.copySelection()
-            return True
-        return super(MatrixWindow, self).eventFilter(source, event)
-
-    def copySelection(self):
-        '''Function used to copy cells from an external datatable'''
-        selection = self.table.selectedIndexes()
-        if selection:
-            rows = sorted(index.row() for index in selection)
-            columns = sorted(index.column() for index in selection)
-            rowcount = rows[-1] - rows[0] + 1
-            colcount = columns[-1] - columns[0] + 1
-            table = [[''] * colcount for _ in range(rowcount)]
-            for index in selection:
-                row = index.row() - rows[0]
-                column = index.column() - columns[0]
-                table[row][column] = index.data()
-            stream = io.StringIO()
-            csv.writer(stream).writerows(table)
-            qApp.clipboard().setText(stream.getvalue())
-
-class MatrixWindow_AskJ(QWidget):
-    '''Class used to open a window to ask which J-surface to display the centrifugal 
-        or total Hamiltonian matrices on'''
-
-    def __init__(self, *args, **kwargs):
-        super(MatrixWindow_AskJ, self).__init__()
-
-        self.J = kwargs['J']
-        self.matrix = kwargs['matrix']
-        self.val    = kwargs['val']
-        
-        if kwargs['J'] == 0:
-            self.J = 0
-            self.c = MatrixWindow(matrix=self.matrix[self.J],val=self.val + "(J=" + str(self.J) + ")")
-            self.c.show()
-
-        else:
-            self.layout = QVBoxLayout()
-            self.lab = QLabel("On which J-surface?")
-            self.box = QComboBox()
-            self.box.addItems([''])
-            self.box.addItems([str(e) for e in range(kwargs['J'])])
-            self.box.currentIndexChanged.connect(self.__newJval)
-
-            self.layout.addWidget(self.lab)
-            self.layout.addWidget(self.box)
-
-            self.setLayout(self.layout)
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def __newJval(self):
-        self.J = int(self.box.currentText())
-        self.c = MatrixWindow(matrix=self.matrix[self.J],val=self.val + "(J=" + str(self.J) + ")")
-        self.c.show()
-
-
-class TruncationWindowValues(QWidget):
-    '''Class to populate and open an external datatable with the error values associated
-        with the truncation of the total Hamiltonian matrix'''
-
-    def __init__(self, vals):
-        super(TruncationWindowValues, self).__init__()
-
-        self.resize(600,600)
-
-        self.vals = vals
-
-        self.df = pd.DataFrame({'ν' : np.arange(0, self.vals.shape[1])
-                               })
-        for j in range(self.vals.shape[0]):
-            self.df['Errors (J=' + str(j) + ')'] = self.vals[j]
-
-        self.df = self.df.round(decimals=7)
-
-        self.table = QTableView()
-        self.model = PandasModel(self.df, edit=False)
-        self.table.setModel(self.model)
-        vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.table)
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-
-class TruncationWindow(QWidget):
-    '''Class to display the vibrational states on differetn J-surfaces which have 
-        converged according to a truncation of the total Hamiltonian matrix. 
-
-        Can open an additional window that shows the truncation errors for all 
-        vibrational states.'''
-
-    def __init__(self, trunc, vals):
-        super(TruncationWindow, self).__init__()
-
-        self.trunc = trunc
-        self.vals = vals
-
-        self.setWindowTitle("Convergence of Eigenvalues")
-        self.resize(400, 50)
-
-        self.layout = QVBoxLayout()
-
-        self.txt = ''
-
-        for j in range(len(trunc)):
-            self.txt += "Eigenvalues converged up to ν = " + str(int(self.trunc[j])) + " on the J = " + str(j) + " surface\n"
-
-        self.label = QLabel(self.txt)
-        self.layout.addWidget(self.label)
-
-        self.q_label = QLabel("View Truncations Errors?")
-        self.hbox = QHBoxLayout()
-        self.hbox.addWidget(self.q_label)
-
-        self.layout.addLayout(self.hbox)
-
-        self.yes_btn = QPushButton("Yes")
-        self.no_btn = QPushButton("No")
-        
-        self.yes_btn.clicked.connect(self.__view_truncation)
-        self.no_btn.clicked.connect(self.__exit_program)
-
-        self.hbox = QHBoxLayout()
-        self.hbox.addWidget(self.yes_btn)
-        self.hbox.addWidget(self.no_btn)
-        
-        self.layout.addLayout(self.hbox)
-
-        self.setLayout(self.layout)
-
-        self.show()
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def __view_truncation(self):
-        self.c = TruncationWindowValues(self.vals)
-        self.c.show()
-
-
-class SaveWindow(QWidget):
-    '''Class used to open an external dialog box to indicate that the chosen matrix
-        has been saved to an external file'''
-
-    def __init__(self, *args, **kwargs):
-        super(SaveWindow, self).__init__()
-
-        self.layout = QVBoxLayout()
-        self.label = QLabel(str(args[0]))
-        self.layout.addWidget(self.label)
-        self.setLayout(self.layout)
-        self.show()
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-
-class VibSpecDataTable(QWidget):
-    '''Class used to populate and open an external datatable with information
-        about the vibrational excitations.
-
-        Can display either populations of vibrational states or intensities
-        of excitations.'''
-        
-    def __init__(self, *args, **kwargs):
-        super(VibSpecDataTable, self).__init__()
-
-        self.resize(600,600)
-
-        v   = kwargs['v']
-        j   = kwargs['J']
-
-        self.df = pd.DataFrame()
-
-        if kwargs['method'] == 'rov':
-            if kwargs['vib_type'] == 'pop':
-                pop = kwargs['pop']
-                p_size = int(pop.size/2)
-
-                temp_arr_v = np.zeros((p_size))
-                temp_arr_j = np.zeros((p_size))
-                temp_arr_e = np.zeros((p_size))
-                temp_arr_p = np.zeros((p_size))
-                c = 0
-                for jj in range(pop.shape[0]):
-                    for vv in range(pop.shape[2]):
-                        temp_arr_v[c] = vv
-                        temp_arr_j[c] = jj
-                        temp_arr_e[c] = pop[jj,0,vv]
-                        temp_arr_p[c] = pop[jj,1,vv]
-                        c += 1
-
-                self.df['v'] = np.asarray(temp_arr_v, dtype=int)
-                self.df['J'] = np.asarray(temp_arr_j, dtype=int)
-                self.df['Energy (cm^-1)'] = temp_arr_e
-                self.df['Population'] = temp_arr_p
-
-            elif kwargs['vib_type'] == 'int':
-                inten = kwargs['inten']
-                i_size = int(inten.size/4)
-
-                temp_arr_v  = np.zeros((i_size))
-                temp_arr_vv = np.zeros((i_size))
-                temp_arr_j  = np.zeros((i_size))
-                temp_arr_e  = np.zeros((i_size))
-                temp_arr_i  = np.zeros((i_size))
-                c = 0
-                for jj in range(inten.shape[0]):
-                    cc = 0
-                    for vv_ in range(inten.shape[2]):
-                        temp_arr_v[c]  = inten[jj,2,cc] 
-                        temp_arr_vv[c] = inten[jj,3,cc]
-                        temp_arr_j[c]  = jj
-                        temp_arr_e[c]  = inten[jj,0,cc]
-                        temp_arr_i[c]  = inten[jj,1,cc]
-                        c+=1
-                        cc+=1
-
-                self.df['v initial'] = np.asarray(temp_arr_v, dtype=int)
-                self.df['v final'] = np.asarray(temp_arr_vv, dtype=int)
-                self.df['J'] = np.asarray(temp_arr_j, dtype=int)
-                self.df['Energy (cm^-1)'] = temp_arr_e
-                self.df['Intensity (s^-1)'] = temp_arr_i
-
-
-        elif kwargs['method'] == 'vib':
-            if kwargs['vib_type'] == 'pop':
-                self.df['v'] = np.arange(0, v)
-                self.df['J'] = np.ones((v), dtype=int)*j
-                self.df['Energy (cm^-1)'] = kwargs['pop'][0]
-                self.df['Population'] = kwargs['pop'][1]
-
-            elif kwargs['vib_type'] == 'int':
-                self.df['v initial'] = np.asarray(kwargs['inten'][2], dtype=int)
-                self.df['v final']   = np.asarray(kwargs['inten'][3], dtype=int)
-                self.df['J'] = np.ones((kwargs['inten'][0].size), dtype=int)*j
-                self.df['Energy (cm^-1)'] = kwargs['inten'][0]
-                self.df['Intensity (s^-1)'] = kwargs['inten'][1]
-
-        self.df = self.df[self.df['Energy (cm^-1)'] != 0]
-
-        self.table = QTableView()
-        self.table.installEventFilter(self)
-        self.model = PandasModel(self.df, edit=False)
-        self.table.setModel(self.model)
-        vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.table)
-        self.show()
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def eventFilter(self, source, event):
-        '''Function used to copy cells from an external datatable'''
-        if (event.type() == QEvent.KeyPress and
-            event.matches(QKeySequence.Copy)):
-            self.copySelection()
-            return True
-        return super(VibSpecDataTable, self).eventFilter(source, event)
-        
-    def copySelection(self):
-        '''Function used to copy cells from an external datatable'''
-        selection = self.table.selectedIndexes()
-        if selection:
-            rows = sorted(index.row() for index in selection)
-            columns = sorted(index.column() for index in selection)
-            rowcount = rows[-1] - rows[0] + 1
-            colcount = columns[-1] - columns[0] + 1
-            table = [[''] * colcount for _ in range(rowcount)]
-            for index in selection:
-                row = index.row() - rows[0]
-                column = index.column() - columns[0]
-                table[row][column] = index.data()
-            stream = io.StringIO()
-            csv.writer(stream).writerows(table)
-            qApp.clipboard().setText(stream.getvalue())
-
-
-class RotSpecDataTable(QWidget):
-    '''Class used to populate and open an external datatable with information
-        about the rotational excitations.
-
-        Can display either populations of rotational states or intensities
-        of excitations.'''
-
-    def __init__(self, *args, **kwargs):
-        super(RotSpecDataTable, self).__init__()
-        v   = kwargs['v']
-        J   = kwargs['J']
-
-        self.resize(600,600)
-        
-        self.df = pd.DataFrame()
-
-        if kwargs['method'] == 'rov':
-            if kwargs['rot_type'] == 'pop':
-                pop = kwargs['pop']
-                p_size = int(pop.size/2)
-
-                temp_arr_v = np.zeros((p_size))
-                temp_arr_j = np.zeros((p_size))
-                temp_arr_e = np.zeros((p_size))
-                temp_arr_p = np.zeros((p_size))
-                c = 0
-                for vv in range(pop.shape[0]):
-                    for jj in range(pop.shape[2]):
-                        temp_arr_v[c] = vv
-                        temp_arr_j[c] = jj
-                        temp_arr_e[c] = pop[vv,0,jj]
-                        temp_arr_p[c] = pop[vv,1,jj]
-                        c += 1
-
-                self.df['v'] = np.asarray(temp_arr_v, dtype=int)
-                self.df['J'] = np.asarray(temp_arr_j, dtype=int)
-                self.df['Energy (cm^-1)'] = temp_arr_e
-                self.df['Population'] = temp_arr_p
-
-            elif kwargs['rot_type'] == 'int':
-                inten = kwargs['inten']
-                i_size = int(inten.size/4)
-
-                temp_arr_j  = np.zeros((i_size))
-                temp_arr_jj = np.zeros((i_size))
-                temp_arr_v  = np.zeros((i_size))
-                temp_arr_e  = np.zeros((i_size))
-                temp_arr_i  = np.zeros((i_size))
-                c = 0
-                for vv in range(inten.shape[0]):
-                    cc = 0
-                    for jj_ in range(inten.shape[2]):
-                        temp_arr_j[c]  = inten[vv,2,cc]
-                        temp_arr_jj[c] = inten[vv,3,cc]
-                        temp_arr_v[c]  = vv
-                        temp_arr_e[c]  = inten[vv,0,cc]
-                        temp_arr_i[c]  = inten[vv,1,cc]
-                        c+=1
-                        cc+=1
-
-                self.df['J initial'] = np.asarray(temp_arr_j, dtype=int)
-                self.df['J final'] = np.asarray(temp_arr_jj, dtype=int)
-                self.df['v'] = np.asarray(temp_arr_v, dtype=int)
-                self.df['Energy (cm^-1)'] = temp_arr_e
-                self.df['Intensity (s^-1)'] = temp_arr_i
-
-
-        elif kwargs['method'] == 'rot':
-            if kwargs['rot_type'] == 'pop':
-                pop = kwargs['pop']
-                self.df['J'] = np.arange(0, J)
-                self.df['v'] = np.ones((J), dtype=int)*v
-                self.df['Energy (cm^-1)'] = kwargs['pop'][0]
-                self.df['Population'] = kwargs['pop'][1]
-
-            elif kwargs['rot_type'] == 'int':
-                self.df['J initial'] = np.asarray(kwargs['inten'][2], dtype=int)
-                self.df['J final']   = np.asarray(kwargs['inten'][3], dtype=int)
-                self.df['v'] = np.ones((kwargs['inten'][0].size), dtype=int)*v
-                self.df['Energy (cm^-1)'] = kwargs['inten'][0]
-                self.df['Intensity (s^-1)'] = kwargs['inten'][1]
-
-        self.df = self.df[self.df['Energy (cm^-1)'] != 0]
-        
-        self.table = QTableView()
-        self.table.installEventFilter(self)
-        self.model = PandasModel(self.df, edit=False)
-        self.table.setModel(self.model)
-        vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.table)
-        self.show()
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def eventFilter(self, source, event):
-        '''Function used to copy cells from an external datatable'''
-        if (event.type() == QEvent.KeyPress and
-            event.matches(QKeySequence.Copy)):
-            self.copySelection()
-            return True
-        return super(RotSpecDataTable, self).eventFilter(source, event)
-
-    def copySelection(self):
-        '''Function used to copy cells from an external datatable'''
-        selection = self.table.selectedIndexes()
-        if selection:
-            rows = sorted(index.row() for index in selection)
-            columns = sorted(index.column() for index in selection)
-            rowcount = rows[-1] - rows[0] + 1
-            colcount = columns[-1] - columns[0] + 1
-            table = [[''] * colcount for _ in range(rowcount)]
-            for index in selection:
-                row = index.row() - rows[0]
-                column = index.column() - columns[0]
-                table[row][column] = index.data()
-            stream = io.StringIO()
-            csv.writer(stream).writerows(table)
-            qApp.clipboard().setText(stream.getvalue())
-
-class RovSpecDataTable(QWidget):
-    '''Class used to populate and open an external datatable with information
-        about the rovibrational excitations.
-
-        Can display either populations of rovibrational states or intensities
-        of excitations.'''
-
-    def __init__(self, *args, **kwargs):
-        super(RovSpecDataTable, self).__init__()
-        v   = kwargs['v']
-        J   = kwargs['J']
-
-        self.resize(600,600)
-
-        self.df = pd.DataFrame()
-
-        if kwargs['rov_type'] == 'pop':
-            pop = kwargs['pop']
-            self.df['v'] = np.asarray(pop[3], dtype=int)
-            self.df['J'] = np.asarray(pop[2], dtype=int)
-            self.df['Energy (cm^-1)'] = pop[0]
-            self.df['Population'] = pop[1]
-
-        elif kwargs['rov_type'] == 'int':
-            inten = kwargs['inten']
-
-            self.df['v initial'] = np.asarray(inten[0], dtype=int)
-            self.df['J initial'] = np.asarray(inten[1], dtype=int)
-            self.df['v final'] = np.asarray(inten[2], dtype=int)
-            self.df['J final'] = np.asarray(inten[3], dtype=int)
-            self.df['E initial'] = inten[4]
-            self.df['E final'] = inten[5]
-            self.df['Energy (cm^-1)'] = inten[6]
-            self.df['Intensity (s^-1)'] = inten[7]
-
-        self.table = QTableView()
-        self.table.installEventFilter(self)
-        self.model = PandasModel(self.df, edit=False)
-        self.table.setModel(self.model)
-        vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.table)
-        self.show()
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-    def eventFilter(self, source, event):
-        '''Function used to copy cells from an external datatable'''
-        if (event.type() == QEvent.KeyPress and
-            event.matches(QKeySequence.Copy)):
-            self.copySelection()
-            return True
-        return super(RovSpecDataTable, self).eventFilter(source, event)
-
-    def copySelection(self):
-        '''Function used to copy cells from an external datatable'''
-        selection = self.table.selectedIndexes()
-        if selection:
-            rows = sorted(index.row() for index in selection)
-            columns = sorted(index.column() for index in selection)
-            rowcount = rows[-1] - rows[0] + 1
-            colcount = columns[-1] - columns[0] + 1
-            table = [[''] * colcount for _ in range(rowcount)]
-            for index in selection:
-                row = index.row() - rows[0]
-                column = index.column() - columns[0]
-                table[row][column] = index.data()
-            stream = io.StringIO()
-            csv.writer(stream).writerows(table)
-            qApp.clipboard().setText(stream.getvalue())
-
-
-
-class ErrorWindow(QWidget):
-    '''Class used to open a dialog box with error information'''
-
-    def __init__(self, errorText):
-        super().__init__()
-
-        self.txt = errorText
-        self.setWindowTitle("Error")
-        self.resize(100,50)
-        layout = QVBoxLayout()
-        self.label = QLabel(self.txt)
-        layout.addWidget(self.label)
-        self.setLayout(layout)
-
-        self.exit_shortcut = QShortcut(QKeySequence("Esc"), self)
-        self.exit_shortcut.activated.connect(self.__exit_program)
-
-    def __exit_program(self):
-        self.close()
-
-class TabBar(QTabBar):
-    '''Class used to contruct the tab-based main window'''
-
-    def tabSizeHint(self, index):
-        s = QTabBar.tabSizeHint(self, index)
-        s.transpose()
-        return s
-
-    def paintEvent(self, event):
-        painter = QStylePainter(self)
-        opt = QStyleOptionTab()
-
-        for i in range(self.count()):
-            self.initStyleOption(opt, i)
-            painter.drawControl(QStyle.CE_TabBarTabShape, opt)
-            painter.save()
-
-            s = opt.rect.size()
-            s.transpose()
-            r = QRect(QPoint(), s)
-            r.moveCenter(opt.rect.center())
-            opt.rect = r
-
-            c = self.tabRect(i).center()
-            painter.translate(c)
-            painter.rotate(90)
-            painter.translate(-c)
-            painter.drawControl(QStyle.CE_TabBarTabLabel, opt);
-            painter.restore()
-
-class ProxyStyle(QProxyStyle):
-    '''Class used to modify the base proxy style for the tab-based main window'''
-
-    def drawControl(self, element, opt, painter, widget):
-        if element == QStyle.CE_TabBarTabLabel:
-            ic = self.pixelMetric(QStyle.PM_TabBarIconSize)
-            r = QRect(opt.rect)
-            w =  0 if opt.icon.isNull() else opt.rect.width() + self.pixelMetric(QStyle.PM_TabBarIconSize)
-            r.setHeight(opt.fontMetrics.width(opt.text) + w)
-            r.moveBottom(opt.rect.bottom())
-            opt.rect = r
-        QProxyStyle.drawControl(self, element, opt, painter, widget)
 
 
 def main():

@@ -206,7 +206,7 @@ class Spectra():
         tdm = tdm / D_au
 
         for vj in range(0, maxV+1):
-            for vi in range(vj, maxV+1):
+            for vi in range(0, maxV+1):
                 for jl in range(0, maxJ+1):
                     for jk in range(max(0, jl-1), min(jl+2, maxJ+1)):
 
@@ -230,7 +230,7 @@ class Spectra():
                             A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jk + 1)  * (4*np.pi*eps_0))
 
                             excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E, t, f, A]).T, axis=0)
-                            
+                           
         return excitations_mat.reshape(int(excitations_mat.shape[0]/10), 10)[1:]
 
 

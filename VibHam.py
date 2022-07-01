@@ -14,11 +14,16 @@ from Interpolate import Interpolate
 from Hamil import Hamil, Wavefunctions
 from Spectra import Spectra
 from Input import Input
+#from GUI import RunFromVibHam
+import GUI
 
 class RunVibHam():
 
     def __init__(self, args):
         self.args = args
+
+        self.maxV = self.args.v
+        self.maxJ = self.args.J
 
     def BREAK(self):
         print ("\n\t*****************************************************\n")
@@ -32,12 +37,12 @@ class RunVibHam():
             val_, vec_ = np.linalg.eig(M[j])
             idx = val_.argsort()
             val[j] = val_[idx]
-            vec[j] = vec_[:,idx].T
+            vec[j] = vec_[:,idx]
         return val*J_cm, vec
 
 
     def LoadData(self):
-        if not self.args.Data:
+        if not self.args.Data and not self.args.LoadData:
             print ("MUST GIVE FILE TO READ IN")
             exit()
 
@@ -66,6 +71,9 @@ class RunVibHam():
 
             print ("\tDipole Moment Information Provided")
             print ("\tPerforming all TDM calculations\n")
+
+        idx = self.Data[0].argsort()
+        self.Data = self.Data[:, idx]
 
         self.BREAK()
     
@@ -102,6 +110,7 @@ class RunVibHam():
                 self.Data[2]  *= 1
             elif self.args.Dip_unit == 'au':
                 self.Data[2]  *= au_D
+
 
     def AtomicInformation(self):
 
@@ -246,8 +255,8 @@ class RunVibHam():
     
             print ()
             print ("\tEquilibrium Dipole Moment")
-            print ("\t\t{:<.9f}{:>7s}".format(self.dEq,  "Debye"))
-            print ("\t\t{:<.9f}{:>4s}".format(self.dEq*D_au,  "au"))
+            print ("\t\t{:<.9f}{:>7s}".format(self.dEq*au_D,  "Debye"))
+            print ("\t\t{:<.9f}{:>4s}".format(self.dEq,  "au"))
 
             print ()
             print ("\tMean Absolute Error")
@@ -270,26 +279,22 @@ class RunVibHam():
 
         self.BREAK()
 
-    def GenerateMatrices(self):
-
-        self.maxV = self.args.v
-        self.maxJ = self.args.J
-        
-        print ("\tMaximum Vibrational Quantum Number - ", self.maxV)
-        print ("\tMaximum Rotational Quantum Number  - ", self.maxJ)
-        
+    def GenerateHarmonicMatrix(self):
         print ()
         print ("\tGenerating Harmonic Hamiltonian Matrix")
-        
+
         gen_hamil = Hamil(ID   = 'harm',
                           maxv = self.maxV+1,
                           nu   = self.nu
                           )
 
         self.harmonic = gen_hamil.harmonic
+        
         np.save("Harmonic_Matrix", self.harmonic)
         print ("\t\tMatrix saved to 'Harmonic_Matrix.npy'")
 
+
+    def GenerateAnharmonicMatrix(self):
         print ()
         print ("\tGenerating Anharmonic Hamiltonian Matrix")
 
@@ -298,11 +303,14 @@ class RunVibHam():
                               coef = self.energy_coef,
                               beta = self.beta
                               )
-        
+
         self.anharmonic = gen_hamil.anharmonic
-        np.save("ANharmonic_Matrix", self.anharmonic)
+        
+        np.save("Anharmonic_Matrix", self.anharmonic)
         print ("\t\tMatrix saved to 'Anharmonic_Matrix.npy'")
 
+
+    def GenerateCentrifugalMatrix(self):
 
         if self.maxJ > 0:
             print ()
@@ -318,28 +326,28 @@ class RunVibHam():
                               )
 
             self.centrifugal = gen_hamil.centrifugal
+            
             np.save("Centrifugal_Matrix", self.centrifugal)
             print ("\t\tMatrix saved to 'Centrifugal_Matrix.npy'")
 
-
-            print ()
-            print ("\tGenerating Total Hamiltonian Matrix")
-
-            self.total = self.harmonic + self.anharmonic + self.centrifugal
-            np.save("Total_Matrix", self.total)
-            print ("\t\tMatrix saved to 'Total_Matrix.npy'")
-
-        
         else:
-            print ()
-            print ("\tGenerating Total Hamiltonian Matrix")
-
-            self.total = np.zeros((1, self.maxV+1, self.maxV+1))
-            self.total[0] = self.harmonic + self.anharmonic
-            np.save("Total_Matrix", self.total)
-            print ("\t\tMatrix saved to 'Total_Matrix.npy'")
+            self.centrifugal = np.zeros((1, self.maxV+1, self.maxV+1))
 
 
+    def GenerateTotalMatrix(self):
+        print ()
+        print ("\tGenerating Total Hamiltonian Matrix")
+
+        self.total = self.harmonic + self.anharmonic + self.centrifugal
+
+        self.total_val, self.total_vec = self.diagonalize(self.total)
+
+        np.save("Total_Matrix", self.total)
+        print ("\t\tMatrix saved to 'Total_Matrix.npy'")
+
+    
+    def GenerateTDMMatrix(self):
+        
         if self.Dip_bool == True:
             print ()
             print ("\tGenerating Transition Dipole Moment Hamiltonian Matrix")
@@ -351,56 +359,161 @@ class RunVibHam():
                               )
 
             self.tdm = gen_hamil.tdm
+
             np.save("TDM_Matrix", self.tdm)
             print ("\t\tMatrix saved to 'TDM_Matrix.npy'")
+        
+        else:
+            self.tdm = np.zeros((self.maxV+1, self.maxV+1))
 
 
-
-        print ()
+    def CheckMatrixStability(self):
         print ("\tChecking Matrix Stability")
 
         self.total_val, self.total_vec = self.diagonalize(self.total)
 
-        stab_v = self.maxV+1
+        self.stab_v = self.maxV+1
         stab_bool = False
 
         if np.amin(self.total_val.flatten()) < 0:
             while stab_bool == False:
-                self.total_val, self.total_vec = self.diagonalize(self.total[:, :stab_v, :stab_v])
+                self.total_val, self.total_vec = self.diagonalize(self.total[:, :self.stab_v, :self.stab_v])
 
                 if np.amin(self.total_val.flatten()) < 0:
-                    stab_v -= 1 
+                    self.stab_v -= 1
                 else:
                     stab_bool = True
 
 
-        print ("\t\tMatrix Stable up to v = ", stab_v-1)
+        print ("\t\tMatrix Stable up to v = ", self.stab_v-1)
 
-        
+    
+    def CheckTruncationError(self):
         print ()
-        print ("\tDetermining Convergence of States up to", self.args.EigVal, "cm^-1")
+        print ("\tDetermining Convergence of States to Within", self.args.EigVal, "cm^-1")
 
         for j in range(self.maxJ+1):
             idx = self.total_val[j].argsort()
             self.total_val[j] = self.total_val[j,idx]
             self.total_vec[j] = self.total_vec[j, :, idx]
 
-        self.total_val_, self.total_vec_ = self.diagonalize(self.total[:, :stab_v-1, :stab_v-1])
+        self.total_val_, self.total_vec_ = self.diagonalize(self.total[:, :self.stab_v-1, :self.stab_v-1])
 
         for j in range(self.maxJ+1):
             idx = self.total_val_[j].argsort()
             self.total_val_[j] = self.total_val_[j,idx]
             self.total_vec_[j] = self.total_vec_[j, :, idx]
-    
-        self.trunc_arr = np.zeros((self.maxJ+1))
-        for j in range(self.maxJ+1):
-            diff_arr = self.total_val_[j] - self.total_val[j,:-1]
-            trunc_val = np.where(diff_arr < self.args.EigVal)[0].flatten()[-1]
-            self.trunc_arr[j] = trunc_val
 
-            print ("\t\tEigenvalues converged up to v = ", trunc_val, "on the J = ", j, "surface")
+        self.trunc_arr     = np.zeros((self.maxJ+1))
+        self.trunc_err_arr = np.zeros((self.maxJ+1, self.maxV))
+
+        for j in range(self.maxJ+1):
+            diff_arr  = self.total_val_[j] - self.total_val[j,:-1]
+            trunc_val = np.where(diff_arr < self.args.EigVal)[0].flatten()[-1]
+            
+            self.trunc_arr[j]     = trunc_val
+            self.trunc_err_arr[j] = diff_arr
+
+            print ("\t\tEigenvalues converged up to v =", trunc_val, "on the J =", j, "surface")
+
+
+    def GenerateMatrices(self):
+
+        print ("\tMaximum Vibrational Quantum Number - ", self.maxV)
+        print ("\tMaximum Rotational Quantum Number  - ", self.maxJ)
+
+        self.GenerateHarmonicMatrix()
+        self.GenerateAnharmonicMatrix()
+        self.GenerateCentrifugalMatrix()
+        self.GenerateTotalMatrix()
+        self.GenerateTDMMatrix()
+        self.CheckMatrixStability()
+        self.CheckTruncationError()
 
         self.BREAK()
+
+
+    def LoadMatrices(self):
+
+        self.script_path = os.getcwd()
+
+        print ("\tAttempting to load 'Harmonic_Matrix.npy'")
+        
+        if not os.path.exists("Harmonic_Matrix.npy"):
+            print ("\t\tNo 'Harmonic_Matrix.npy' file found")
+            self.GenerateHarmonicMatrix()
+        
+        else:
+            try:
+                self.harmonic = np.load("Harmonic_Matrix.npy")
+                print ("\t\tMatrix successfully loaded.")
+
+            except:
+                print ("\t\tMatrix unable to be loaded.")
+                self.GenerateHarmonicMatrix()
+
+
+        print ("\n")
+        print ("\tAttempting to load 'Anharmonic_Matrix.npy'")
+
+        if not os.path.exists("Anharmonic_Matrix.npy"):
+            print ("\t\tNo 'Anharmonic_Matrix.npy' file found")
+            self.GenerateAnharmonicMatrix()
+
+        else:
+            try:
+                self.anharmonic = np.load("Anharmonic_Matrix.npy")
+                print ("\t\tMatrix successfully loaded.")
+
+            except:
+                print ("\t\tMatrix unable to be loaded.")
+                self.GenerateAnharmonicMatrix()
+
+
+        if self.maxJ > 0:
+            print ("\n")
+            print ("\tAttempting to load 'Centrifugal_Matrix.npy'")
+
+            if not os.path.exists("Centrifugal_Matrix.npy"):
+                print ("\t\tNo 'Centrifugal_Matrix.npy' file found")
+                self.GenerateCentrifugalMatrix()
+
+            else:
+                try:
+                    self.centrifugal = np.load("Centrifugal_Matrix.npy")
+                    print ("\t\tMatrix successfully loaded.")
+
+                except:
+                    print ("\t\tMatrix unable to be loaded.")
+                    self.GenerateCentrifugalMatrix()
+
+        if self.Dip_bool == True:
+            print ("\n")
+            print ("\tAttempting to load 'TDM_Matrix.npy'")
+
+            if not os.path.exists("TDM_Matrix.npy"):
+                print ("\t\tNo 'TDM_Matrix.npy' file found")
+                self.GenerateTDMMatrix()
+
+            else:
+                try:
+                    self.tdm = np.load("TDM_Matrix.npy")
+                    print ("\t\tMatrix successfully loaded.\n")
+
+                except:
+                    print ("\t\tMatrix unable to be loaded.")
+                    self.GenerateTDMMatrix()
+
+
+        self.GenerateTotalMatrix()
+        
+        self.BREAK()
+
+        self.CheckMatrixStability()
+        self.CheckTruncationError()
+
+        self.BREAK()
+
 
     def TurningPoints(self):
         tps = Spectra()
@@ -416,7 +529,328 @@ class RunVibHam():
                                             )
 
     def PrintEigen(self):
-        self
+
+        if self.args.Print < 3:
+            print ("\tThese are the converged energy levels and their respecitve turning points:")
+            print ()
+        else:
+            print ("\tThese are the energy levels and their respecitve turning points:")
+            print ()
+
+        dash = "\t- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+
+        val_strings = ['State', 'Energy (cm^-1)', 'Error', 'ΔE', 'LEFT TP', 'RIGHT TP', 'CENTER']
+
+
+        if self.args.Print < 3:
+            self.max_print_v = self.trunc_arr
+        else:
+            self.max_print_v = np.ones((self.maxV+1)) * self.maxV
+
+
+        for j in range(self.total_val.shape[0]-1, -1, -1):
+
+            print ("\tOn the J = ", j, "surface")
+            print ()
+            
+            print ('\t{:>4s}{:>21s}{:>14s}{:>14s}{:>13s}{:>13s}{:>13s}'.format(*val_strings))
+            
+            if self.args.Print == 2 or self.args.Print == 4:
+                print (dash)
+
+                vec_strings = ['Vector', 'Contribution', 'Weight']
+                print ('\t{:>4s}{:>21s}{:>13s}\n\n'.format(*vec_strings))
+
+            for v in range(int(self.max_print_v[j]), -1, -1):
+
+                if v == 0:
+                    diff = 0.0
+                else:
+                    diff = self.total_val[j,v] - self.total_val[j,v-1]
+
+                if v == self.maxV:
+                    trunc_err = np.inf
+                else:
+                    trunc_err = self.trunc_err_arr[j,v]
+
+                if self.tps[j,0,v] == 0.0:
+                    left_tp = '-'
+                    center_tp = '-'
+                else:
+                    left_tp = str(round(self.tps[j,0,v], 7))
+
+                if self.tps[j,1,v] == 0.0:
+                    right_tp = '-'
+                    center_tp = '-'
+                else:
+                    right_tp = str(round(self.tps[j,1,v], 7))
+
+                if left_tp != '-' and right_tp != '-':
+                    center_tp = str((float(left_tp) + float(left_tp)) / 2.)
+                else:
+                    center_tp = '-'
+                
+                print ('\t{:<13s}{:>13f}{:>14e}{:>14f}{:>13s}{:>13s}{:>13s}'.format(
+                            str(v),
+                            round(self.total_val[j,v], 7),
+                            round(trunc_err, 5),
+                            round(diff, 7),
+                            left_tp,
+                            right_tp,
+                            center_tp,
+                            )
+                            )
+
+                if self.args.Print == 2 or self.args.Print == 4:
+                    print (dash)
+
+                    for vv in range(int(self.max_print_v[j]), -1, -1):
+                        print ('\t{:<13s}{:>13f}{:>13f}'.format(
+                            str(vv),
+                            round(self.total_vec[j, vv, v], 7),
+                            round(self.total_vec[j, vv, v]**2, 7)))
+                    print ()
+                    print ()
+
+            print ()
+
+        self.BREAK()
+
+    def DissociationEnergy(self):
+        self.diss_e = self.Data[1,-1] - self.eEq
+        self.diss_err = self.Data[1,-1] - self.Data[1, -2]
+
+        self.diss_0 = self.diss_e - self.total_val[0,0]/hart_cm
+    
+        print ("\tDissociation Energy\n")
+        print ()
+        print ("\tDe")
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_e, self.diss_err, "Eh"))
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_e*hart_eV, self.diss_err*hart_eV, "eV"))
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_e*hart_kcal, self.diss_err*hart_kcal, "kcal/mol"))
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_e*hart_cm, self.diss_err*hart_cm, "cm^-1"))
+        print ()
+        print ("\tD0")
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_0, self.diss_err, "Eh"))
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_0*hart_eV, self.diss_err*hart_eV, "eV"))
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_0*hart_kcal, self.diss_err*hart_kcal, "kcal/mol"))
+        print ("\t\t{:>12f}   +/- {:>12f}{:>10s}".format(self.diss_0*hart_cm, self.diss_err*hart_cm, "cm^-1"))
+        print ()
+        
+        self.BREAK()
+
+    def Excitations(self):
+
+        #TODO Check to match up with GUI.py
+
+        excite = Spectra()
+        self.excitations = excite.Excitations(self.total_val,
+                                              self.total_vec,
+                                              int(self.max_print_v[0]),
+                                              self.maxJ,
+                                              self.tdm
+                                              )
+
+        strings = ['Vi', 'Ji', 'Vj', 'Jj', 'Ei', 'Ej', 'ΔE', 'TDM', 'f', 'A']
+        print ("\t{:<5s}{:<5s}{:<5s}{:<5s}{:>15s}{:>15s}{:>15s}{:>15s}{:>15s}{:>15s}".format(*strings))
+    
+        for c, val in enumerate(self.excitations):
+
+            print ("\t{:<5d}{:<5d}{:<5d}{:<5d}{:>15f}{:>15f}{:>15f}{:>15e}{:>15e}{:>15e}".format(
+                                    int(val[0]), int(val[1]), int(val[2]), int(val[3]), 
+                                    val[4], val[5],val[6],
+                                    val[7], 
+                                    val[8],
+                                    val[9]
+                                    ))
+            try:
+                if self.excitations[c,0] != self.excitations[c+1,0]:
+                    print ("\n")
+                if self.excitations[c,2] != self.excitations[c+1,2]:
+                    print ()
+            except:
+                pass
+
+        self.BREAK()
+
+    def Constants(self):
+
+        spectra = Spectra()
+
+        print ("\tPure Vibrational Constants on Different J-Surfaces\n")
+
+        self.vib_spec_values = spectra.Vibrational(self.total_val, 
+                                                   self.args.Constants-1, 
+                                                   self.maxJ
+                                                   )
+
+        spc = np.append(np.arange(0, self.maxJ+1, 4), self.maxJ+1)
+
+        for v_ in range(spc.size-1):
+            for j_ in range(spc[v_], spc[v_+1]):
+                print ("\t{:>14s}".format("J = " + str(j_)), end='')
+            print ()
+            for vv_ in range(min(self.total_val.shape[1], self.args.Constants)):
+                if vv_ == 0:
+                    print ("\t{:>6s}".format("we"), end=' ')
+                elif vv_ == 1:
+                    print ("\t{:>6s}".format("ωexe"), end=' ')
+                elif vv_ == 2:
+                    print ("\t{:>6s}".format("ωeye"), end=' ')
+                elif vv_ == 3:
+                    print ("\t{:>6s}".format("ωeze"), end=' ')
+                else:
+                    print ("\t{:>6s}".format("ωe" + str(vv_) + "e"), end=' ')
+
+                for j_ in range(spc[v_], spc[v_+1]):
+                    print ("\t{:>13e}".format(self.vib_spec_values[vv_, j_]), end=' ')
+                print ()
+            print ()
+
+        self.BREAK()
+
+        print ("\tPure Rotational Constants on Different v-Surfaces\n")
+
+        self.rot_spec_values = spectra.Rotational(self.total_val, 
+                                                  int(self.max_print_v[0]),
+                                                  self.args.Constants-1
+                                                   )
+
+        spc = np.append(np.arange(0, int(self.max_print_v[0])+1, 4), int(self.max_print_v[0])+1)
+
+        for j_ in range(spc.size-1):
+            for v_ in range(spc[j_], spc[j_+1]):
+                print ("\t{:>14s}".format("v = " + str(v_)), end='')
+            print ()
+            for jj_ in range(min(self.total_val.shape[0], self.args.Constants)):
+                if jj_ == 0:
+                    print ("\t{:>6s}".format("Be"), end=' ')
+                elif jj_ == 1:
+                    print ("\t{:>6s}".format("De"), end=' ')
+                elif jj_ == 2:
+                    print ("\t{:>6s}".format("Fe"), end=' ')
+                elif jj_ == 3:
+                    print ("\t{:>6s}".format("He"), end=' ')
+                else:
+                    print ("\t{:>6s}".format(str(jj_) + "e"), end=' ')
+
+                for v_ in range(spc[j_], spc[j_+1]):
+                    print ("\t{:>13e}".format(self.rot_spec_values[jj_, v_]), end=' ')
+                print ()
+            print ()
+        
+        self.BREAK()
+
+        self.rov_spec_values, vjmat = spectra.Rovibrational(self.total_val,
+                                                            self.args.Constants,
+                                                            self.args.Constants
+                                                            )
+
+        print ("\tVibrational Constants on the Full Surface\n")
+        print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
+
+        for v_ in range(self.args.Constants):
+            if v_ == 0:
+                s = 'we'
+            elif v_ == 1:
+                s = 'wexe'
+            elif v_ == 2:
+                s = 'weye' 
+            elif v_ == 3:
+                s = 'weze'
+            else:
+                s = 'we' + str(v_) + 'e'
+            print ("\t{:>6s}{:>21e}{:>15e}".format(s, self.rov_spec_values[v_], self.rov_spec_values[v_]*cm_mhz))
+            
+
+        print ("\n")
+        print ("\tRotational Constants on the Full Surface\n")
+        print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
+
+        for j_ in range(self.args.Constants):
+            if j_ == 0:
+                s = 'Be'
+            elif j_ == 1:
+                s = 'De'
+            elif j_ == 2:
+                s = 'Fe'
+            elif j_ == 3:
+                s = 'He'
+            else:
+                s = str(v_) + 'e'
+            print ("\t{:>6s}{:>21e}{:>15e}".format(s, self.rov_spec_values[j_+v_+1], self.rov_spec_values[j_+v_+1]*cm_mhz))
+
+        
+        print ("\n")
+        p_list = ["\tRotation-Vibration Coupling Constants (cm^-1)\n", 
+                  "\tRotation-Vibration Coupling Constants (MHz)\n"]
+
+        c_list = [1, cm_mhz]
+
+        for p in range(2):
+            print (p_list[p])
+            print ("\t{:>15s}".format(" "), end=' ')
+            for v_ in range(1, self.args.Constants):
+                print ("\t{:<11s}".format("v = " + str(v_)) + "  ", end='')
+            print ()
+            c = self.args.Constants*2
+            for j_ in range(1, self.args.Constants+1):
+                print ("\t{:<7s}".format("J = " + str(j_) + " "), end=' ')
+                for v_ in range(self.args.Constants-1):
+                    print ("\t{:>14e}".format(self.rov_spec_values[c]*c_list[p]), end=' ')
+                    c+=1
+                print ()
+            print ("\n")
+
+
+        self.BREAK()
+        
+
+    def Dunham(self):
+        dunham = Spectra()
+        self.dunham_Y, self.dunham_coef = dunham.Dunham(self.Data[0],
+                                                        self.Data[1],
+                                                        self.rEq,
+                                                        self.eEq,
+                                                        self.reduced_mass,
+                                                        self.wEq,
+                                                        self.bEq
+                                                        )
+
+        self.Y_id_one = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0 ,1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
+        self.Y_id_two = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4]
+        self.Y_id_thr = ['-',    'Be',    'De',   'He', 'Fe',
+                        'we',   'alpha', 'beta', '-',   '-',
+                        'wexe', 'gamma',  '-',   '-',   '-',
+                        'weye', '-',      '-',   '-',   '-',
+                        'weze', '-',      '-',   '-',   '-']
+
+
+        print ("\tDunham Polynomial Fit Coefficients\n")
+        strings = ['Parameter', 'cm^-1', 'MHz']
+        print ('\t{:>0s}{:>18s}{:>23s}'.format(*strings))
+        
+        for c, coef in enumerate(self.dunham_coef):
+            print ("\t{:>9s}{:>18f}{:>23f}".format('a' + str(c), coef, coef*cm_mhz))
+
+
+        print ("\tDunham Y-Parameters / Spectroscopic Equivalents\n")
+        strings = ['Parameter', 'Spectroscopic Constant', 'cm^-1', 'MHz']
+        print ('\t{:>0s}{:>25s}{:>15s}{:>20}'.format(*strings))
+
+        for p, param in enumerate(self.dunham_Y):
+            dun_id = str(self.Y_id_one[p]) + str(self.Y_id_two[p])
+            print("\t{:>9s}{:>14s}{:>26e}{:>20e}".format('Y' + dun_id, self.Y_id_thr[p], param, param*cm_mhz))
+
+        self.BREAK()
+
+    
+    def End(self, start):
+        minutes, seconds = divmod(time.time() - start, 60)
+        print ("\tEnd of Program - ", "%d minutes, %d seconds" %(minutes, seconds), "\n")
+
+
+
 
 def Main():
 
@@ -424,15 +858,31 @@ def Main():
 
     args = Input()
 
+    if args.i or args.Interactive:
+        gui = GUI.main()
+        sys.exit()
+
+    script_path = os.getcwd()
+
     VibHam = RunVibHam(args)
 
     VibHam.LoadData()
     VibHam.ConvertData()
     VibHam.AtomicInformation()
     VibHam.Interpolate()
-    VibHam.GenerateMatrices()
+
+    if not args.LoadData:
+        VibHam.GenerateMatrices()
+    else:
+        VibHam.LoadMatrices()
+
     VibHam.TurningPoints()
     VibHam.PrintEigen()
+    VibHam.DissociationEnergy()
+    VibHam.Excitations()
+    VibHam.Constants()
+    VibHam.Dunham()
+    VibHam.End(start)
 
 if __name__ == "__main__":
 
