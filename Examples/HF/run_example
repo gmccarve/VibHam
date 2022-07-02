@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# This example uses the potential energy curve for HF developed by Coxon et al and the dipole moment function for HF developed by Li et al:
+#       DOI - https://doi.org/10.1016/j.jqsrt.2014.08.028 (Coxon)
+#	DOI - https://doi.org/10.1016/j.jqsrt.2013.02.005 (Li)
+
+python3 ../../VibHam.py -Atoms h f -v 25 -J 5 -Data HF.txt -Energy_Fit 8 -Dipole_Fit 5 -Constants 3
