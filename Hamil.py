@@ -515,5 +515,5 @@ class Wavefunctions():
 
             Inte[level]   = inte_sq / np.amax(inte_sq)
 
-        return I, Inte
+        return I_r, Inte
 
