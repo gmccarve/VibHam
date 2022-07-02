@@ -42,6 +42,7 @@ class RunVibHam():
 
 
     def LoadData(self):
+        '''Function used to load and order the energy/dipole curve information'''
         if not self.args.Data and not self.args.LoadData:
             print ("MUST GIVE FILE TO READ IN")
             exit()
@@ -79,6 +80,7 @@ class RunVibHam():
     
     
     def ConvertData(self):
+        '''Function used to convert the datafile to appropriate units'''
         print ("\tConverting bond distance to Angstrom")
         print ("\tConverting electronic energy to Hartrees")
 
@@ -113,7 +115,7 @@ class RunVibHam():
 
 
     def AtomicInformation(self):
-
+        '''Function used to assign masses based on either atom-type and isotope of manually given mass'''
         if not self.args.Atoms and not self.args.Masses:
             print ("\tMUST PROVIDE EITHER ATOMS OR MASSES\n")
             print ("\tQuitting Program\n")
@@ -158,7 +160,7 @@ class RunVibHam():
 
 
     def Interpolate(self):
-
+        '''Function used to interpolate the energy/dipole curves'''
         inter = Interpolate(temp_data = self.Data,
                             atoms     = [self.Atom1, self.Atom2],
                             isotopes  = [self.Iso1, self.Iso2],
@@ -280,6 +282,7 @@ class RunVibHam():
         self.BREAK()
 
     def GenerateHarmonicMatrix(self):
+        '''Function used to generate the harmonic Hamiltonian matrix'''
         print ()
         print ("\tGenerating Harmonic Hamiltonian Matrix")
 
@@ -295,6 +298,7 @@ class RunVibHam():
 
 
     def GenerateAnharmonicMatrix(self):
+        '''Function used to generate the anharmonic Hamiltonian matrix'''
         print ()
         print ("\tGenerating Anharmonic Hamiltonian Matrix")
 
@@ -311,7 +315,7 @@ class RunVibHam():
 
 
     def GenerateCentrifugalMatrix(self):
-
+        '''Function used to generate the centrifugal potential Hamiltonian matrix'''
         if self.maxJ > 0:
             print ()
             print ("\tGenerating Centrifugal Potential Hamiltonian Matrix")
@@ -335,6 +339,7 @@ class RunVibHam():
 
 
     def GenerateTotalMatrix(self):
+        '''Function used to generate the total Hamiltonian matrix'''
         print ()
         print ("\tGenerating Total Hamiltonian Matrix")
 
@@ -347,7 +352,7 @@ class RunVibHam():
 
     
     def GenerateTDMMatrix(self):
-        
+        '''Function used to generate the transition dipole moment Hamiltonian matrix'''
         if self.Dip_bool == True:
             print ()
             print ("\tGenerating Transition Dipole Moment Hamiltonian Matrix")
@@ -368,6 +373,8 @@ class RunVibHam():
 
 
     def CheckMatrixStability(self):
+        '''Function used to check the stability of the total matrix through the presence
+            of negative eigenvalues'''
         print ("\tChecking Matrix Stability")
 
         self.total_val, self.total_vec = self.diagonalize(self.total)
@@ -389,6 +396,7 @@ class RunVibHam():
 
     
     def CheckTruncationError(self):
+        '''Function used to check the truncation error of the finite Hamiltonian matrix'''
         print ()
         print ("\tDetermining Convergence of States to Within", self.args.EigVal, "cm^-1")
 
@@ -418,6 +426,7 @@ class RunVibHam():
 
 
     def GenerateMatrices(self):
+        '''Function used to generate the required matrices'''
 
         print ("\tMaximum Vibrational Quantum Number - ", self.maxV)
         print ("\tMaximum Rotational Quantum Number  - ", self.maxJ)
@@ -434,6 +443,7 @@ class RunVibHam():
 
 
     def LoadMatrices(self):
+        '''Function used to load in precomputed matrices'''
 
         self.script_path = os.getcwd()
 
@@ -522,6 +532,7 @@ class RunVibHam():
 
 
     def TurningPoints(self):
+        '''Function used to calculate the turning points along the energy curve'''
         tps = Spectra()
 
         self.tps = np.zeros((self.maxJ+1, 2, self.maxV+1))
@@ -535,6 +546,7 @@ class RunVibHam():
                                             )
 
     def PrintEigen(self):
+        '''Function used to print the eigenvalue information'''
 
         if self.args.Print < 3:
             print ("\tThese are the converged energy levels and their respecitve turning points:")
@@ -623,6 +635,7 @@ class RunVibHam():
         self.BREAK()
 
     def DissociationEnergy(self):
+        '''Function used to approximate the dissociation energies'''
         self.diss_e = self.Data[1,-1] - self.eEq
         self.diss_err = self.Data[1,-1] - self.Data[1, -2]
 
@@ -646,9 +659,7 @@ class RunVibHam():
         self.BREAK()
 
     def Excitations(self):
-
-        #TODO Check to match up with GUI.py
-
+        '''Function used to calculate all rovibrational excitations'''
         excite = Spectra()
         self.excitations = excite.Excitations(self.total_val,
                                               self.total_vec,
@@ -680,7 +691,7 @@ class RunVibHam():
         self.BREAK()
 
     def Constants(self):
-
+        '''Function used to calculate all rovibrational spectroscopic constants'''
         spectra = Spectra()
 
         print ("\tPure Vibrational Constants on Different J-Surfaces\n")
@@ -813,6 +824,7 @@ class RunVibHam():
         
 
     def Dunham(self):
+        '''Function used to interpolate the energy curve using a Dunham-type polynomial'''
         dunham = Spectra()
         self.dunham_Y, self.dunham_coef = dunham.Dunham(self.Data[0],
                                                         self.Data[1],
@@ -857,9 +869,8 @@ class RunVibHam():
 
 
 
-
 def Main():
-
+    '''Main function of the VibHam program'''
     start = time.time()
 
     args = Input()
@@ -891,7 +902,6 @@ def Main():
     VibHam.End(start)
 
 if __name__ == "__main__":
-
 
     Main()
 
