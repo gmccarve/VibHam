@@ -8,6 +8,7 @@ import os
 import traceback
 import io
 import csv
+from pathlib import Path
 
 from Conversions import *
 from Atoms import Atoms
@@ -80,11 +81,10 @@ class TabWidget(QTabWidget):
         self.tab8.grid_layout = self.__TurningPointsTab()
         self.tab9.grid_layout = self.__SimulatedSpectraTab()
 
-        self.path = os.path.abspath(__file__)
-        self.path = "/" + "/".join(str(self.path).split("/")[1:-1]) + "/"
+        self.path = os.path.abspath(__file__)[:-6]
 
 
-    def __exit_program(self):
+    def __exit_program(selaf):
         '''Function used to exit the program and close all windows'''
         exit()
 
@@ -257,17 +257,23 @@ class TabWidget(QTabWidget):
         self.element_lab.clicked.connect(self.__elementsWindow)
         self.element_lab.setToolTip("Atoms in periodic order")
 
-        self.atom1_id = QLineEdit("")
+        self.atom1_id = QComboBox()
+        self.atom1_id.addItems(self.Atoms.AtomDict.keys())
+        self.atom1_id.setStyleSheet("QComboBox { combobox-popup: 0}")
+        self.atom1_id.setMaxVisibleItems(10)
+        self.atom1_id.currentIndexChanged.connect(self.__atom1_id_changed)
+        self.atom1_id.currentIndexChanged.connect(self.__iso1_combo_selected)
+        self.atom1_id.currentIndexChanged.connect(self.__mass1_str_changed)
         self.atom1_id.setFixedWidth(100)
-        self.atom1_id.textChanged.connect(self.__atom1_id_changed)
-        self.atom1_id.textChanged.connect(self.__iso1_combo_selected)
-        self.atom1_id.textChanged.connect(self.__mass1_str_changed)
 
-        self.atom2_id = QLineEdit("")
+        self.atom2_id = QComboBox()
+        self.atom2_id.addItems(self.Atoms.AtomDict.keys())
+        self.atom2_id.setStyleSheet("QComboBox { combobox-popup: 0}")
+        self.atom2_id.setMaxVisibleItems(10)
+        self.atom2_id.currentIndexChanged.connect(self.__atom2_id_changed)
+        self.atom2_id.currentIndexChanged.connect(self.__iso2_combo_selected)
+        self.atom2_id.currentIndexChanged.connect(self.__mass2_str_changed)
         self.atom2_id.setFixedWidth(100)
-        self.atom2_id.textChanged.connect(self.__atom2_id_changed)
-        self.atom2_id.textChanged.connect(self.__iso2_combo_selected)
-        self.atom2_id.textChanged.connect(self.__mass2_str_changed)
 
         # Define the Isotopes
 
@@ -430,8 +436,8 @@ class TabWidget(QTabWidget):
         self.mass1 = self.atom1[self.iso1]
         self.mass2 = self.atom2[self.iso2]
 
-        self.atom1_id.setText("C")
-        self.atom2_id.setText("O")
+        self.atom1_id.setCurrentText("C")
+        self.atom2_id.setCurrentText("O")
 
         self.__iso1_combo_selected()
         self.__iso2_combo_selected()
@@ -446,10 +452,16 @@ class TabWidget(QTabWidget):
 
     def __load_HF_example_data(self):
         '''Used to load example data for hydrogen fluoride (HF)'''
-        self.filename = self.path + "/Examples/HF/HF.txt"
-        self.data_ = np.loadtxt(self.filename).T
-        self.data = self.data_.copy()
-        self.loc.setText(self.filename)
+        try:
+            self.filename = self.path + "/Examples/HF/HF.txt"
+            self.data_ = np.loadtxt(self.filename).T
+            self.data = self.data_.copy()
+            self.loc.setText(self.filename)
+        except:
+            self.filename = self.path + "\Examples\HF\HF.txt"
+            self.data_ = np.loadtxt(self.filename).T
+            self.data = self.data_.copy()
+            self.loc.setText(self.filename)
 
         self.atom1 = self.Atoms.AtomDict['H']
         self.atom2 = self.Atoms.AtomDict['F']
@@ -460,8 +472,9 @@ class TabWidget(QTabWidget):
         self.mass1 = self.atom1[self.iso1]
         self.mass2 = self.atom2[self.iso2]
 
-        self.atom1_id.setText("H")
-        self.atom2_id.setText("F")
+        self.atom1_id.setCurrentText("H")
+        self.atom2_id.setCurrentText("F")
+        
         self.__iso1_combo_selected()
         self.__iso2_combo_selected()
         self.__mass1_str_changed()
@@ -612,7 +625,7 @@ class TabWidget(QTabWidget):
     def __atom1_id_changed(self):
         '''Activated following a change for atom 1'''
         try:
-            self.atom1 = self.Atoms.AtomDict[self.atom1_id.text()]
+            self.atom1 = self.Atoms.AtomDict[self.atom1_id.currentText()]
 
             self.iso1_box.clear()
             self.iso1_box.addItems([str(e) for e in self.atom1])
@@ -623,13 +636,14 @@ class TabWidget(QTabWidget):
             self.mass1_str.setText(str(round(self.mass1, 8)))
 
         except:
-            self.errorText = "Atom not found"
+            self.errorText = "Atom not found\n\n"  + str(traceback.format_exc()) 
             self.__openErrorMessage()
+
 
     def __atom2_id_changed(self):
         '''Activated following a change of atom 2'''
         try:
-            self.atom2 = self.Atoms.AtomDict[self.atom2_id.text()]
+            self.atom2 = self.Atoms.AtomDict[self.atom2_id.currentText()]
 
             self.iso2_box.clear()
             self.iso2_box.addItems([str(e) for e in self.atom2])
@@ -710,8 +724,8 @@ class TabWidget(QTabWidget):
         self.c.show()
 
     def __change_atoms_(self, atom1, atom2):
-        self.atom1_id.setText(atom1)
-        self.atom2_id.setText(atom2)
+        self.atom1_id.setCurrentText(atom1)
+        self.atom2_id.setCurrentText(atom2)
 
 
 
@@ -2368,10 +2382,10 @@ class TabWidget(QTabWidget):
             if float(item).is_integer():
                 cell = QTableWidgetItem(str(int(item)))
             else:
-                if abs(item) < 1e-5:
-                    item_str = "{:.5e}".format(item)
+                if abs(item) < 1e-9:
+                    item_str = "{:.9e}".format(item)
                 else:
-                    item_str = round(item,5)
+                    item_str = round(item,9)
                 cell = QTableWidgetItem(str(item_str))
             self.rovib_spec_table.setItem(row, col, cell)
             col += 1
