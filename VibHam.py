@@ -438,8 +438,8 @@ class RunVibHam():
         self.script_path = os.getcwd()
 
         print ("\tAttempting to load 'Harmonic_Matrix.npy'")
-        
-        if not os.path.exists("Harmonic_Matrix.npy"):
+
+        try:
             print ("\t\tNo 'Harmonic_Matrix.npy' file found")
             self.GenerateHarmonicMatrix()
         
@@ -447,6 +447,7 @@ class RunVibHam():
             try:
                 self.harmonic = np.load("Harmonic_Matrix.npy")
                 print ("\t\tMatrix successfully loaded.")
+                self.args.v = self.harmonic.shape[0]
 
             except:
                 print ("\t\tMatrix unable to be loaded.")
