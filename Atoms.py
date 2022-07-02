@@ -1,6 +1,9 @@
 class Atoms():
     '''Class used to populate a dictionary of atomic dictionaries which contain isotope
-        and mass information for all 118 elements'''
+        and mass information for all 118 elements
+
+        Isotope 0 corresponds to the most abundant isotope
+    '''
 
     def __init__(self):
         self.AtomDict ={
