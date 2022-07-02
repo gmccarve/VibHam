@@ -4,8 +4,6 @@
 #       Energy Unit Conversions
 #       Mass Unit Conversions
 #       Distance Unit Conversions
-#
-#
 #################################################
 
 
@@ -78,5 +76,5 @@ ang_bohr = 1/bohr_ang        # Angstrom to bohr
 
 au_D = 2.541                # Atomic units to Debye
 D_au = 1. / au_D            # Debye to atomic units
-D_CM = 3.33564E-30
+D_CM = 3.33564E-30          # Debye to coulomb-meters
 
