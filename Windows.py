@@ -939,7 +939,7 @@ class ElementWindow(QWidget):
 
         groups_ = [alkali, alkaline, transition, lanthanides, actinides, metalloids, nonmetals, unknown, noble, post]
         
-        colors = ['cyan',  'red',    'magenta',  'darkRed',  'darkMagenta', 'yellow',   'blue',    'gray',  'darkCyan', 'green']
+        colors = ['#0099ff', '#ff8080', '#9999ff', '#ff4dd2', '#bf80ff', '#66ff33', '#CCCCFF', '#afafb6', '#668cff', '#33ff99']
 
         width=30
 
