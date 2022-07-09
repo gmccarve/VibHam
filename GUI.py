@@ -1686,7 +1686,6 @@ class TabWidget(QTabWidget):
             self.harmonic = gen_hamil.harmonic
             self.total = self.harmonic + self.anharmonic + self.centrifugal
             
-            self.__sort_all_excitations()
             self.__show_eigenvalue_table()
 
         except:
@@ -1704,7 +1703,6 @@ class TabWidget(QTabWidget):
             self.anharmonic = gen_hamil.anharmonic
             self.total = self.harmonic + self.anharmonic + self.centrifugal
             
-            self.__sort_all_excitations()
             self.__show_eigenvalue_table()
 
         except:
@@ -1726,7 +1724,6 @@ class TabWidget(QTabWidget):
             self.centrifugal = gen_hamil.centrifugal
             self.total = self.harmonic + self.anharmonic + self.centrifugal
             
-            self.__sort_all_excitations()
             self.__show_eigenvalue_table()
 
         except:
@@ -1784,7 +1781,6 @@ class TabWidget(QTabWidget):
                                 )
                 self.tdm = gen_tdm.tdm
 
-            self.__sort_all_excitations()
         except:
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
@@ -2470,6 +2466,11 @@ class TabWidget(QTabWidget):
 
         self.exc_labels = ['Vi', 'Ji', 'Vj', 'Jj', 'Ei', 'Ej', 'dE', 'TDM', 'f', 'A']
 
+        # Refresh Button
+
+        self.excitations_refresh_btn = QPushButton("Refresh")
+        self.excitations_refresh_btn.clicked.connect(self.__refresh_excitations)
+
         # View excitation data
 
         self.excitation_vib_btn = QPushButton("Sort by Vibrational Excitations")
@@ -2494,11 +2495,12 @@ class TabWidget(QTabWidget):
 
         # Define the layout of the tab using a grid
 
-        self.dotted_line8 = QLabel("-"*120)
-
         self.tab5.grid_layout = QGridLayout()
 
         row=0
+        self.tab5.grid_layout.addWidget(self.excitations_refresh_btn, row, 1, 1, 1, alignment=Qt.AlignCenter)
+
+        row+=1
         self.tab5.grid_layout.addWidget(self.excitation_vib_btn, row, 0, 1, 1, alignment=Qt.AlignCenter)
         self.tab5.grid_layout.addWidget(self.excitation_rot_btn, row, 1, 1, 1, alignment=Qt.AlignCenter)
         self.tab5.grid_layout.addWidget(self.excitation_all_btn, row, 2, 1, 1, alignment=Qt.AlignCenter)
@@ -2508,18 +2510,26 @@ class TabWidget(QTabWidget):
 
         self.tab5.setLayout(self.tab5.grid_layout)
 
-        
-    def __sort_vib_excitations(self):
-        '''Used to calculate and sort the excitation data by J-values for vibrational excitations'''
+    def __refresh_excitations(self):
+        '''Used to refresh the calculated rovibrational excitations'''
         try:
+            self.total_val, self.total_vec = self.__diagonalize(self.total)
             excite = Spectra()
-            self.excitations = excite.Excitations(self.total_val, 
-                                                  self.total_vec, 
+            self.excitations = excite.Excitations(self.total_val,
+                                                  self.total_vec,
                                                   int(self.max_trunc_val),
                                                   int(self.maxJ),
                                                   self.tdm
                                                   )
-            
+            self.__sort_all_excitations()
+        except:
+            self.errorText = str(traceback.format_exc())
+            self.__openErrorMessage()
+
+
+    def __sort_vib_excitations(self):
+        '''Used to sort the excitation data by J-values for vibrational excitations'''
+        try:
             self.df = pd.DataFrame()
 
             for j in range(len(self.exc_labels)):
@@ -2530,29 +2540,21 @@ class TabWidget(QTabWidget):
             self.df = self.df.sort_values(by=['Ji', 'Jj'])
             self.df = self.df[self.df['Ji'] == self.df['Jj']]
 
-            self.excitations = self.df.to_numpy()
+            self.excitations_ = self.df.to_numpy()
 
             while (self.excitations_table.rowCount()) > 0:
                 self.excitations_table.removeRow(0)
 
-            for i in range(self.excitations.shape[0]):
-                self.__add_excitations_table_row([*self.excitations[i]])
+            for i in range(self.excitations_.shape[0]):
+                self.__add_excitations_table_row([*self.excitations_[i]])
 
         except Exception as e:
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
     def __sort_rot_excitations(self):
-        '''Used to calculate and sort the excitation data by v-values for rotational excitations'''
+        '''Used to sort the excitation data by v-values for rotational excitations'''
         try:
-            excite = Spectra()
-            self.excitations = excite.Excitations(self.total_val, 
-                                                  self.total_vec, 
-                                                  int(self.max_trunc_val),
-                                                  int(self.maxJ),
-                                                  self.tdm
-                                                  )
-
             self.df = pd.DataFrame()
 
             for j in range(len(self.exc_labels)):
@@ -2563,31 +2565,21 @@ class TabWidget(QTabWidget):
             self.df = self.df.sort_values(by=['Vi', 'Vj'])
             self.df = self.df[self.df['Vi'] == self.df['Vj']]
 
-            self.excitations = self.df.to_numpy()
+            self.excitations_ = self.df.to_numpy()
 
             while (self.excitations_table.rowCount()) > 0:
                 self.excitations_table.removeRow(0)
 
-            for i in range(self.excitations.shape[0]):
-                self.__add_excitations_table_row([*self.excitations[i]])
+            for i in range(self.excitations_.shape[0]):
+                self.__add_excitations_table_row([*self.excitations_[i]])
 
         except Exception as e:
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
 
     def __sort_all_excitations(self):
-        '''Used to calculate and sort the excitation data by v/J-values for rovibrational excitations'''
+        '''Used to sort the excitation data by v/J-values for rovibrational excitations'''
         try:
-            self.total_val, self.total_vec = self.__diagonalize(self.total)
-            excite = Spectra()
-
-            self.excitations = excite.Excitations(self.total_val, 
-                                                  self.total_vec, 
-                                                  int(self.max_trunc_val), 
-                                                  int(self.maxJ), 
-                                                  self.tdm
-                                                  )
-
             self.df = pd.DataFrame()
 
             for j in range(len(self.exc_labels)):
