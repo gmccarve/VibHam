@@ -422,10 +422,16 @@ class TabWidget(QTabWidget):
 
     def __load_CO_example_data(self):
         '''Used to load example data for carbon monoxide (CO)'''
-        self.filename = self.path + "/Examples/CO/CO.txt"
-        self.data_ = np.loadtxt(self.filename).T
-        self.data = self.data_.copy()
-        self.loc.setText(self.filename)
+        try:
+            self.filename = self.path + "/Examples/CO/CO.txt"
+            self.data_ = np.loadtxt(self.filename).T
+            self.data = self.data_.copy()
+            self.loc.setText(self.filename)
+        except:
+            self.filename = self.path + "\Examples\CO\CO.txt"
+            self.data_ = np.loadtxt(self.filename).T
+            self.data = self.data_.copy()
+            self.loc.setText(self.filename)
 
         self.atom1 = self.Atoms.AtomDict['C']
         self.atom2 = self.Atoms.AtomDict['O']
