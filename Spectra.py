@@ -217,7 +217,7 @@ class Spectra():
 
                         t = np.matmul(vecs[jl,vj,:], np.matmul(tdm, vecs[jk,vi,:]))
     
-                        if abs(E) > 0.:     
+                        if E < 0.:     
 
                             if jl == jk:    
                                 S = 1
@@ -227,10 +227,16 @@ class Spectra():
                                 S = jl
 
                             f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E*cm_J * S * (t * D_CM)**2 / (2*jl + 1)
-                            A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jk + 1)  * (4*np.pi*eps_0))
+                            A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * (E*cm_J)**3 * S * (t * D_CM)**2 / ((2*jl + 1)  * (4*np.pi*eps_0))
+                            
+                            excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E, t, f, A]).T, axis=0)
+
+                        elif E > 0.:
+                            f = 0
+                            A = 0
 
                             excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E, t, f, A]).T, axis=0)
-                           
+
         return excitations_mat.reshape(int(excitations_mat.shape[0]/10), 10)[1:]
 
 
