@@ -1221,7 +1221,6 @@ class TabWidget(QTabWidget):
 
     def __energy_coefficients(self):
         '''Open an external table to view the power series expansion coefficients for the energy curve'''
-        #TODO CHECKK UNITS
         try:
             self.coef_win.close()
         except:
@@ -1235,13 +1234,12 @@ class TabWidget(QTabWidget):
 
     def __dipole_coefficients(self):
         '''Open an external table to view the power series expansion coefficients for the dipole curve'''
-        #TODO CHECK UNITS
         try:
             self.coef_win.close()
         except:
             pass
         if self.dipole_coef[0] != '':
-            self.coef_win = CoefficientWindow(self.dipole_coef, 'dipole')
+            self.coef_win = CoefficientWindow(self.dipole_coef[::-1], 'dipole')
             self.coef_win.show()
         else:
             self.errorText = "No coefficients found"

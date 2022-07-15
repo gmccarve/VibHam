@@ -106,12 +106,12 @@ class CoefficientWindow(QWidget):
             cc = np.zeros((coef.size))
 
             for j in range(cc.size):
-                cc[j] = self.coef[j] * ang_m**j * D_au
+                cc[j] = self.coef[j] / ang_m**j / D_au
 
 
             self.df = pd.DataFrame({"Order (n)" : np.arange(0, self.coef.size),
-                                    "Value (au/m^n)" : cc,
-                                    "Value (D/Ang^n)" : self.coef
+                                    "Value (au/m^n)" : self.coef,
+                                    "Value (D/Ang^n)" : cc
                                     })
 
         self.table = QTableView()
