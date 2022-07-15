@@ -2691,8 +2691,8 @@ class TabWidget(QTabWidget):
         '''Used to calculate and sort the Dunham Y-parameters and coefficients'''
         try:
             dunham = Spectra()
-            self.dunham_Y, self.dunham_coef = dunham.Dunham(self.data[0], 
-                                                            self.data[1], 
+            self.dunham_Y, self.dunham_coef = dunham.Dunham(self.temp_data[0], 
+                                                            self.temp_data[1], 
                                                             self.rEq, 
                                                             self.eEq, 
                                                             self.reduced_mass,
