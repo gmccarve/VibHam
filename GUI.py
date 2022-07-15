@@ -1957,6 +1957,10 @@ class TabWidget(QTabWidget):
                 self.harmonic = self.harmonic[:-n, :-n]
                 self.total = self.total[:,:-n,:-n]
 
+                self.maxV = self.total.shape[1] - self.trunc-1
+
+                self.__show_eigenvalue_table()
+
             else:
                 self.trunc_win = StabilityWindow(self.total.shape[1] - self.trunc-1, 1)
                 self.trunc_win.show()
