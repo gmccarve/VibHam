@@ -14,7 +14,6 @@ from Interpolate import Interpolate
 from Hamil import Hamil, Wavefunctions
 from Spectra import Spectra
 from Input import Input
-#from GUI import RunFromVibHam
 import GUI
 
 class RunVibHam():
@@ -878,8 +877,6 @@ def Main():
     if args.i or args.Interactive:
         gui = GUI.main()
         sys.exit()
-
-    script_path = os.getcwd()
 
     VibHam = RunVibHam(args)
 
