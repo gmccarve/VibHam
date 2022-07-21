@@ -10,7 +10,7 @@ import csv
 from Conversions import *
 from Atoms import Atoms
 from Interpolate import Interpolate
-from Hamil import Hamil, Wavefunctions
+from HamilP import Hamil, Wavefunctions
 from Spectra import Spectra
 
 import matplotlib.pyplot as plt

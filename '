@@ -8,6 +8,8 @@ from math import factorial as fac
 
 from Conversions import *
 
+import HamilF
+
 class Hamil():
     '''Class used to contain all functions used to construct the Hamiltonian Matrices
 
@@ -26,11 +28,27 @@ class Hamil():
     def __init__(self, *args, **kwargs):
 
         if kwargs['ID'] == 'harm':
-            self.harmonic = self.__Harmonic(*args, **kwargs)
+            if kwargs['method'] == 'python':
+                self.harmonic = self.__Harmonic(*args, **kwargs)
+
+            elif kwargs['method'] == 'fortran':
+                HamilF.harmonic(kwargs['maxV']-1, kwargs['nu'])
+                self.harmonic = np.loadtxt("harmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                os.system("rm harmonic.tmp")
+
         elif kwargs['ID'] == 'anharm':
-            self.anharmonic = self.__AnHarmonic(*args, **kwargs)
+            if kwargs['method'] == 'python':
+                self.anharmonic = self.__AnHarmonic(*args, **kwargs)
+            
+            elif kwargs['method'] == 'fortran':
+                HamilF.anharmonic(kwargs['maxV']-1, kwargs['coef'], kwargs['beta'])
+                #self.anharmonic = np.loadtxt("anharmonic.tmp").reshape(kwargs['maxv'], kwargs['maxv'])
+                #os.system("rm harmonic.tmp")
+                exit()
+
         elif kwargs['ID'] == 'cent':
             self.centrifugal = self.__Centrifugal(*args, **kwargs)
+        
         elif kwargs['ID'] == 'tdm':
             self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
 
@@ -98,12 +116,12 @@ class Hamil():
                 H - The harmonic Hamiltonain Matrix
         '''
                 
-        self.maxV = kwargs['maxv']
+        self.maxV = kwargs['maxV']
         self.nu = kwargs['nu']
 
         H = np.zeros((self.maxV, self.maxV))                  
         for n in range(self.maxV):                           
-            H[n,n] = (n * 2 + 1) * h_bar * self.nu * 0.5     
+            H[n,n] = (n * 2 + 1) * h_bar * self.nu * 0.5   
         return H                                           
 
 
@@ -148,13 +166,13 @@ class Hamil():
 
             for v in range(self.maxV):               
                 N_i = self.__Norm(v)                  
-                H_i = self.__Hermite(v)              
+                H_i = self.__Hermite(v)     
 
                 for vv in range(v, self.maxV):       
                     N_j = self.__Norm(vv)            
                     H_j = self.__Hermite(vv)         
 
-                    inte = 0                    
+                    inte = 0      
 
                     for i in range(H_i.size):       
                         if H_i.size == 1:           
@@ -175,11 +193,16 @@ class Hamil():
                                         Bval = (1. / self.beta**(EXP + 1))                          # Total beta portion
                                         Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2)))       # Total factorial portion
                                         inte += Hval * Bval * Fval * np.sqrt(np.pi)                 
-
+                                        print (Bval, inte)
                     H_temp[v, vv] = inte * N_i * N_j * C        
                     H_temp[vv, v] = inte * N_i * N_j * C        # Hamiltonian array is symmetric so match across the diagonal
 
             H += H_temp
+
+            print (H)
+            print ()
+
+        exit()
 
         return H
 

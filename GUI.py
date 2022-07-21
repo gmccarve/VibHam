@@ -13,7 +13,7 @@ from pathlib import Path
 from Conversions import *
 from Atoms import Atoms
 from Interpolate import Interpolate
-from Hamil import Hamil, Wavefunctions
+from HamilP import Hamil, Wavefunctions
 from Spectra import Spectra
 from Windows import *
 
@@ -1684,7 +1684,7 @@ class TabWidget(QTabWidget):
         '''Generate the harmonic matrix'''
         try:
             gen_hamil = Hamil(ID   = 'harm',
-                              maxv = self.maxV+1,
+                              maxV = self.maxV+1,
                               nu   = self.nu                              
                               )
             self.harmonic = gen_hamil.harmonic
@@ -1753,7 +1753,7 @@ class TabWidget(QTabWidget):
             self.__interpolate_data()
 
             gen_harm = Hamil(ID   = 'harm',
-                             maxv = self.maxV+1,
+                             maxV = self.maxV+1,
                              nu   = self.nu
                              )
             self.harmonic = gen_harm.harmonic

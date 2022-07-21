@@ -156,6 +156,14 @@ def Input():
                         action='store_true'
                         )
 
+    parser.add_argument('-Method',
+                        action='store',
+                        help='Method to calculate Hamiltonian matrices',
+                        type=str.lower,
+                        choices=['fortran', 'python'],
+                        default='fortran'
+                        )
+
 
 
 

@@ -11,7 +11,7 @@ import time
 from Conversions import *
 from Atoms import Atoms
 from Interpolate import Interpolate
-from Hamil import Hamil, Wavefunctions
+from HamilP import Hamil, Wavefunctions
 from Spectra import Spectra
 from Input import Input
 import GUI
@@ -285,9 +285,10 @@ class RunVibHam():
         print ()
         print ("\tGenerating Harmonic Hamiltonian Matrix")
 
-        gen_hamil = Hamil(ID   = 'harm',
-                          maxv = self.maxV+1,
-                          nu   = self.nu
+        gen_hamil = Hamil(ID     = 'harm',
+                          maxV   = self.maxV+1,
+                          nu     = self.nu, 
+                          method = self.args.Method
                           )
 
         self.harmonic = gen_hamil.harmonic
@@ -304,7 +305,8 @@ class RunVibHam():
         gen_hamil = Hamil(ID = 'anharm',
                               maxV = self.maxV+1,
                               coef = self.energy_coef,
-                              beta = self.beta
+                              beta = self.beta, 
+                              method = self.args.Method
                               )
 
         self.anharmonic = gen_hamil.anharmonic
