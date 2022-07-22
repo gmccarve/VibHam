@@ -414,7 +414,7 @@ class RunVibHam():
             self.total_vec_[j] = self.total_vec_[j, :, idx]
 
         self.trunc_arr     = np.zeros((self.maxJ+1))
-        self.trunc_err_arr = np.zeros((self.maxJ+1, self.maxV))
+        self.trunc_err_arr = np.zeros((self.maxJ+1, self.total_val.shape[1]-1))
 
         for j in range(self.maxJ+1):
             diff_arr  = self.total_val_[j] - self.total_val[j,:-1]
@@ -536,7 +536,7 @@ class RunVibHam():
         '''Function used to calculate the turning points along the energy curve'''
         tps = Spectra()
 
-        self.tps = np.zeros((self.maxJ+1, 2, self.maxV+1))
+        self.tps = np.zeros((self.maxJ+1, 2, self.maxV))
 
         for j in range(self.maxJ+1):
 
@@ -666,7 +666,7 @@ class RunVibHam():
                                               self.total_vec,
                                               int(self.max_print_v[0]),
                                               self.maxJ,
-                                              self.tdm
+                                              self.tdm[:self.stab_v, :self.stab_v]
                                               )
 
         strings = ['Vi', 'Ji', 'Vj', 'Jj', 'Ei', 'Ej', 'ΔE', 'TDM', 'f', 'A']

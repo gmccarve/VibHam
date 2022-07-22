@@ -1683,9 +1683,10 @@ class TabWidget(QTabWidget):
     def __generate_harm_matrix(self):
         '''Generate the harmonic matrix'''
         try:
-            gen_hamil = Hamil(ID   = 'harm',
-                              maxV = self.maxV+1,
-                              nu   = self.nu                              
+            gen_hamil = Hamil(ID     = 'harm',
+                              maxV   = self.maxV+1,
+                              nu     = self.nu,
+                              method = 'fortran'
                               )
             self.harmonic = gen_hamil.harmonic
             self.total = self.harmonic + self.anharmonic + self.centrifugal
@@ -1699,10 +1700,11 @@ class TabWidget(QTabWidget):
     def __generate_anharm_matrix(self):
         '''Generate the anharmonic matrix'''
         try:
-            gen_hamil = Hamil(ID = 'anharm',
-                              maxV = self.maxV+1,
-                              coef = self.energy_coef, 
-                              beta = self.beta
+            gen_hamil = Hamil(ID     = 'anharm',
+                              maxV   = self.maxV+1,
+                              coef   = self.energy_coef, 
+                              beta   = self.beta,
+                              method = 'fortran'
                               )
             self.anharmonic = gen_hamil.anharmonic
             self.total = self.harmonic + self.anharmonic + self.centrifugal
@@ -1737,7 +1739,7 @@ class TabWidget(QTabWidget):
     def __generate_tdm_matrix(self):
         '''Generate the transition dipole moment matrix'''
         try:
-            gen_hamil = Hamil(ID = 'tdm',
+            gen_hamil = Hamil(ID   = 'tdm',
                               maxV = self.maxV+1,
                               coef = self.dipole_coef,
                               beta = self.beta
@@ -1752,16 +1754,18 @@ class TabWidget(QTabWidget):
         try:
             self.__interpolate_data()
 
-            gen_harm = Hamil(ID   = 'harm',
-                             maxV = self.maxV+1,
-                             nu   = self.nu
+            gen_harm = Hamil(ID     = 'harm',
+                             maxV   = self.maxV+1,
+                             nu     = self.nu,
+                             method = 'fortran'
                              )
             self.harmonic = gen_harm.harmonic
             
-            gen_anharm = Hamil(ID = 'anharm',
-                               maxV = self.maxV+1,
-                               coef = self.energy_coef, 
-                               beta = self.beta
+            gen_anharm = Hamil(ID     = 'anharm',
+                               maxV   = self.maxV+1,
+                               coef   = self.energy_coef, 
+                               beta   = self.beta,
+                               method = 'fortran'
                                )
             self.anharmonic = gen_anharm.anharmonic
 

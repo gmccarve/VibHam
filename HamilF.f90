@@ -64,7 +64,8 @@ C
 
         interface
           function Hermite(X) RESULT(H)
-            INTEGER :: X, H(X)
+            INTEGER :: X
+            DOUBLE PRECISION :: H(X)
           end function
           function Norm(BETA,V) RESULT (N)
             DOUBLE PRECISION :: BETA, N
@@ -74,6 +75,10 @@ C
             INTEGER :: N
             DOUBLE PRECISION :: P
           end function
+          function Ex(N) RESULT(X)
+            INTEGER :: N
+            DOUBLE PRECISION :: X
+          end function
         end interface
 
 
@@ -81,7 +86,8 @@ C
 
         DOUBLE PRECISION :: COEF(:), C, BETA
 
-        INTEGER :: HERMI(0:V), HERMJ(0:V), XP, TXP, I, J
+        DOUBLE PRECISION :: HERMI(0:V), HERMJ(0:V)
+        INTEGER :: XP, TXP, I, J
         DOUBLE PRECISION :: NORMI, NORMJ
         DOUBLE PRECISION :: INTE
         DOUBLE PRECISION :: HVAL, BVAL, FVAL
@@ -129,8 +135,9 @@ C
 
                       IF (MOD(TXP,2) .EQ. 0) THEN
                         HVAL = HERMI(I) * HERMJ(J)
-                        FVAL = FAC(TXP) / (2**TXP * Fac(TXP/2))
+                        FVAL = Fac(TXP) / (Ex(TXP) * Fac(TXP/2))
                         INTE = INTE + HVAL * FVAL * BVAL * SQRT(PI)
+
                       ENDIF
                     ENDIF
                   ENDDO
@@ -150,7 +157,6 @@ C
         OPEN (unit=12, file='anharmonic.tmp', status='REPLACE')
         WRITE (12,*) H
         CLOSE (unit=12)
-
 
         END
 
@@ -174,6 +180,10 @@ C                N      - Normalization value
             INTEGER :: N
             DOUBLE PRECISION :: P
           end function
+          function Ex(N) RESULT(X)
+            INTEGER :: N
+            DOUBLE PRECISION :: X
+          end function
         end interface
 
         DOUBLE PRECISION :: BETA
@@ -182,13 +192,13 @@ C                N      - Normalization value
         DOUBLE PRECISION :: PI
         PARAMETER (PI = 4 * ATAN(1.d0))
 
-        N = (1.d0 / SQRT(SQRT(PI))) * SQRT(BETA / (2**V * Fac(V)))
+        N = (1.d0 / SQRT(SQRT(PI))) * SQRT(BETA / (Ex(V) * Fac(V)))
 
         END function
         
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
-        INTEGER function Hermite(X) RESULT(H)
+        DOUBLE PRECISION function Hermite(X) RESULT(H)
 
 C       Function used to calculate a Hermite polynomial of arbitrary order. 
 C
@@ -210,26 +220,26 @@ C                H3(x) =  0 - 12x + 0x^2 + 8x^3  --> [ 0,-12, 0, 8]
 C
 
         INTEGER :: X, I, D
-        INTEGER :: HN1(0:X), DHN1(0:X)
+        DOUBLE PRECISION :: HN1(0:X), DHN1(0:X)
         
         DIMENSION :: H(0:X)
 
-        HN1  = 0
-        DHN1 = 0
-        H    = 0  
+        HN1  = 0.d0
+        DHN1 = 0.d0
+        H    = 0.d0
 
         IF (X .EQ. 0) THEN
-          H(0) = 1
+          H(0) = 1.d0
         ELSE IF (X .EQ. 1) THEN
-          H(0) = 0
-          H(1) = 2
+          H(0) = 0.d0
+          H(1) = 2.d0
         ELSE
           DO I=2,X
             IF (I .EQ. 2) THEN
-              HN1(0) = 0
-              HN1(1) = 2
+              HN1(0) = 0.d0
+              HN1(1) = 2.d0
 
-              DHN1(0) = 2
+              DHN1(0) = 2.d0
             ELSE
               HN1 = H
               
@@ -259,6 +269,23 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
+        DOUBLE PRECISION function Ex(N) RESULT(X)
+C      
+C       Calculates the factorial of n
+C
+        INTEGER :: N, I
+
+        IF (N .EQ. 0) THEN
+          X = 1.d0
+        ELSE
+          X = 2.d0
+          DO I=1,N-1
+            X = X*2.d0
+          ENDDO
+        ENDIF
+
+        END function
+
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
@@ -268,7 +295,7 @@ C       Calculates the factorial of n
 C
         INTEGER :: N, I
 
-        P = 1
+        P = 1.d0
 
         DO I=1,N
             P = P*I
