@@ -45,12 +45,6 @@ class Hamil():
                 self.anharmonic = np.loadtxt("anharmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
                 os.system("rm anharmonic.tmp")
 
-            #for j in range(kwargs['maxV']):
-            #    for jj in range(kwargs['maxV']):
-            #        print (self.anharmonic[j,jj]*J_cm, end=' ')
-            #    print ()
-            #exit()
-
         elif kwargs['ID'] == 'cent':
             self.centrifugal = self.__Centrifugal(*args, **kwargs)
         
@@ -199,15 +193,10 @@ class Hamil():
                                         Fval = fac(TotExp) / (2**TotExp * fac(int(TotExp/2)))       # Total factorial portion
                                         inte += Hval * Bval * Fval * np.sqrt(np.pi)
 
-                                        #print (n+1, v, vv, i, j, Hval, Bval, Fval)
-
-                    #print (n+1,v,vv,inte,N_i, N_j, C)
                     H_temp[v, vv] = inte * N_i * N_j * C        
                     H_temp[vv, v] = inte * N_i * N_j * C        # Hamiltonian array is symmetric so match across the diagonal
 
             H += H_temp
-
-        #exit()
 
         return H
 
