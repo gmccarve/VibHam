@@ -49,7 +49,13 @@ class Hamil():
             self.centrifugal = self.__Centrifugal(*args, **kwargs)
         
         elif kwargs['ID'] == 'tdm':
-            self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
+            if kwargs['method'] == 'python':
+                self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
+
+            elif kwargs['method'] == 'fortran':
+                HamilF.tdm(kwargs['maxV']-1, kwargs['coef'], kwargs['beta'])
+                self.tdm = np.loadtxt("tdm.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                os.system("rm tdm.tmp")
 
     def __Norm(self, v_):
         ''' Function to calculate the normalization constant for a harmonic oscillator wave fucntion of order v
@@ -362,7 +368,7 @@ class Hamil():
                 inte = 0.        
 
                 for n in range(len(self.Dcoef)):             
-                    mu = self.Dcoef[-1 - n] * ang_m**n       
+                    mu = self.Dcoef[-1 - n] * ang_m**n    
 
                     for i in range(H_i.size):                
                         if H_i.size == 1:           
@@ -385,9 +391,8 @@ class Hamil():
                                         inte += mu * Hval * Bval * Fval * np.sqrt(np.pi) 
 
                 H[v, vv] = inte * N_i * N_j             
-                H[vv, v] = inte * N_i * N_j        
-
-
+                H[vv, v] = inte * N_i * N_j      
+    
         return H
 
 
