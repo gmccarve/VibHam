@@ -39,27 +39,25 @@ C       Function used to populate the Anharmonic Hamiltonian matrix.
 C            These integrals are calculated analytically. 
 C
 C            Variables:
-C                self.maxV   - Hamiltonian matrix dimension
-C                self.Ecoef  - Array of power series expansion coefficients
-C                self.beta   - Beta value for the diatomic molecule
-C                H           - Hamiltonian Matrix
-C                H_temp      - temporary Hamiltonian Matrix
-C                EXP         - Order of power series expansion coefficient
-C                C           - Power series expansion coefficient
-C                N_i         - __Normalization consant for bra
-C                N_j         - __Normalization consant for ket
-C                H_i         - __Hermite polynomial array for bra
-C                H_j         - __Hermite polynomial array for ket
-C                Hi          - __Hermite polynomial coefficient for bra
-C                Hj          - __Hermite polynomial coefficient for ket
-C                inte        - running value of integral
-C                TotExp      - Total exponent given __Hermite polynomials of bra, ket, and power series expansion
-C                Hval        - Total value of bra and ket __Hermite polynomial coefficients
-C                Bval        - Value to account for powers of beta^n
-C                Fval        - Value of factorials given analtical solution to integral
+C                V       - Hamiltonian matrix dimension
+C                COEF    - Array of power series expansion coefficients
+C                BETA    - Beta value for the diatomic molecule
+C                H       - Hamiltonian Matrix
+C                Hh      - temporary Hamiltonian Matrix
+C                XP      - Order of power series expansion coefficient
+C                C       - Power series expansion coefficient
+C                NORMI   - Normalization consant for bra
+C                NORMJ   - Normalization consant for ket
+C                HERMI   - Hermite polynomial array for bra
+C                HERMJ   - Hermite polynomial array for ket
+C                INTE    - running value of integral
+C                TXP     - Total exponent given __Hermite polynomials of bra, ket, and power series expansion
+C                HVAL    - Total value of bra and ket __Hermite polynomial coefficients
+C                BVAL    - Value to account for powers of beta^n
+C                FVAL    - Value of factorials given analtical solution to integral
 C
 C            Returns:
-C                H - The anharmonic Hamiltonian matrix
+C                H       - The anharmonic Hamiltonian matrix
 C
 
         interface
@@ -159,6 +157,130 @@ C
         CLOSE (unit=12)
 
         END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        subroutine TDM(V, COEF, BETA)
+
+C       Function used to populate the Transition Dipole Moment Hamiltonian matrix.
+C            These integrals are calculated analytically. 
+C
+C            Variables:
+C                V       - Hamiltonian matrix dimension
+C                COEF    - Array of power series expansion coefficients
+C                BETA    - Beta value for the diatomic molecule
+C                H       - Hamiltonian Matrix
+C                Hh      - temporary Hamiltonian Matrix
+C                XP      - Order of power series expansion coefficient
+C                MU       - Power series expansion coefficient
+C                NORMI   - Normalization consant for bra
+C                NORMJ   - Normalization consant for ket
+C                HERMI   - Hermite polynomial array for bra
+C                HERMJ   - Hermite polynomial array for ket
+C                INTE    - running value of integral
+C                TXP     - Total exponent given __Hermite polynomials of bra, ket, and power series expansion
+C                HVAL    - Total value of bra and ket __Hermite polynomial coefficients
+C                BVAL    - Value to account for powers of beta^n
+C                FVAL    - Value of factorials given analtical solution to integral
+C
+C            Returns:
+C                H       - The anharmonic Hamiltonian matrix
+C
+
+
+        interface
+          function Hermite(X) RESULT(H)
+            INTEGER :: X
+            DOUBLE PRECISION :: H(X)
+          end function
+          function Norm(BETA,V) RESULT (N)
+            DOUBLE PRECISION :: BETA, N
+            INTEGER :: V
+          end function
+          function Fac(N) RESULT(P)
+            INTEGER :: N
+            DOUBLE PRECISION :: P
+          end function
+          function Ex(N) RESULT(X)
+            INTEGER :: N
+            DOUBLE PRECISION :: X
+          end function
+        end interface
+
+
+        INTEGER :: V, N, NC(1), NV, NVV
+
+        DOUBLE PRECISION :: COEF(:), MU, BETA
+
+        DOUBLE PRECISION :: HERMI(0:V), HERMJ(0:V)
+        INTEGER :: TXP, I, J
+        DOUBLE PRECISION :: NORMI, NORMJ
+        DOUBLE PRECISION :: INTE
+        DOUBLE PRECISION :: HVAL, BVAL, FVAL
+
+        DOUBLE PRECISION :: H(0:V,0:V), Hh(0:V,0:V)
+
+        DOUBLE PRECISION :: HBAR, ANG2M, PI
+        PARAMETER (HBAR = 1.054571817E-34)
+        PARAMETER (ANG2M = 1E-10)
+        PARAMETER (PI = 4 * ATAN(1.d0))
+
+        H = 0.d0
+
+        NC = SHAPE(COEF)
+
+        NORMI = 0.d0
+        NORMJ = 0.d0
+
+        DO NV=0,V
+          HERMI = Hermite(NV)
+          NORMI = Norm(BETA, NV)
+
+          HERMJ = 0
+
+          DO NVV=NV,V
+            HERMJ = Hermite(NVV)
+            NORMJ = Norm(BETA, NVV)
+
+            INTE = 0.d0
+
+            DO N=NC(1),1,-1
+              MU = COEF(N) * ANG2M**(NC(1)-N)
+
+              BVAL = (1. / BETA**(NC(1)-N+1))
+
+              DO I=0,NV
+                IF (HERMI(I) .NE. 0) THEN
+                  DO J=0,NVV
+                    IF (HERMJ(J) .NE. 0) THEN
+                      TXP = I + J + (NC(1)-N)
+
+                      IF (MOD(TXP,2) .EQ. 0) THEN
+                        HVAL = HERMI(I) * HERMJ(J)
+                        FVAL = Fac(TXP) / (Ex(TXP) * Fac(TXP/2))
+                        INTE = INTE + MU * HVAL * FVAL * BVAL * SQRT(PI)
+
+                      ENDIF
+                    ENDIF
+                  ENDDO
+                ENDIF
+              ENDDO
+
+            ENDDO
+
+            H(NV, NVV) = INTE * NORMI * NORMJ
+            H(NVV, NV) = INTE * NORMI * NORMJ
+
+          ENDDO
+        ENDDO
+        
+        OPEN (unit=12, file='tdm.tmp', status='REPLACE')
+        WRITE (12,*) H
+        CLOSE (unit=12)
+
+        END
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
