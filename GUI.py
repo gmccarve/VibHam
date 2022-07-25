@@ -1382,7 +1382,7 @@ class TabWidget(QTabWidget):
         self.trunc_err_val = 0.01                                       # Maximum error for truncation
         self.max_trunc_val = self.maxV                                  # Maximum converged qauntum state
         self.trunc_err_arr = np.ones((self.max_trunc_val))*self.maxV    # Array of converged quantum states
-
+        self.trunc = self.maxV
 
         # Change values for quantum numbers
 
@@ -1725,7 +1725,8 @@ class TabWidget(QTabWidget):
                               rEq  = self.rEq, 
                               beta = self.beta, 
                               reduced_mass = self.reduced_mass,
-                              Trap = 2000
+                              Trap = 2000,
+                              method = 'fortran'
                               )
             self.centrifugal = gen_hamil.centrifugal
             self.total = self.harmonic + self.anharmonic + self.centrifugal
@@ -1777,7 +1778,8 @@ class TabWidget(QTabWidget):
                              rEq  = self.rEq, 
                              beta = self.beta, 
                              reduced_mass = self.reduced_mass,
-                             Trap = 2000
+                             Trap = 2000, 
+                             method = 'fortran'
                              )
             self.centrifugal = gen_cent.centrifugal
             self.total = self.harmonic + self.anharmonic + self.centrifugal
@@ -1952,16 +1954,19 @@ class TabWidget(QTabWidget):
             while self.vals[0,0] < 0:
                 n += 1
                 self.vals, self.vects = self.__diagonalize(self.total[:,:-n,:-n])
-            
-            self.trunc = n
 
+            self.trunc = n
+            
             if self.trunc > 0:
                 self.trunc_win = StabilityWindow(self.total.shape[1] - self.trunc-1, 0)
                 self.trunc_win.show()
 
-                self.trunc = n
                 self.harmonic = self.harmonic[:-n, :-n]
                 self.total = self.total[:,:-n,:-n]
+
+                self.total_val, self.total_vec = self.__diagonalize(self.total)
+
+                self.tdm = self.tdm[:-n,:-n]
 
                 self.maxV = self.total.shape[1] - self.trunc-1
 
@@ -2345,6 +2350,7 @@ class TabWidget(QTabWidget):
                                                                        int(self.vib_spec_order)+1,
                                                                        int(self.rot_spec_order)+1
                                                                        )
+
         except Exception as e:
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
@@ -2531,7 +2537,7 @@ class TabWidget(QTabWidget):
             excite = Spectra()
             self.excitations = excite.Excitations(self.total_val,
                                                   self.total_vec,
-                                                  int(self.max_trunc_val),
+                                                  min(int(self.total_val.shape[1] - self.trunc - 1), self.max_trunc_val),
                                                   int(self.maxJ),
                                                   self.tdm
                                                   )
@@ -2539,7 +2545,6 @@ class TabWidget(QTabWidget):
         except:
             self.errorText = str(traceback.format_exc())
             self.__openErrorMessage()
-
 
     def __sort_vib_excitations(self):
         '''Used to sort the excitation data by J-values for vibrational excitations'''
