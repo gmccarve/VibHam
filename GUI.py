@@ -1739,10 +1739,11 @@ class TabWidget(QTabWidget):
     def __generate_tdm_matrix(self):
         '''Generate the transition dipole moment matrix'''
         try:
-            gen_hamil = Hamil(ID   = 'tdm',
-                              maxV = self.maxV+1,
-                              coef = self.dipole_coef,
-                              beta = self.beta
+            gen_hamil = Hamil(ID     = 'tdm',
+                              maxV   = self.maxV+1,
+                              coef   = self.dipole_coef,
+                              beta   = self.beta,
+                              method = 'fortran'
                               )
             self.tdm = gen_hamil.tdm
         except:
@@ -1782,10 +1783,11 @@ class TabWidget(QTabWidget):
             self.total = self.harmonic + self.anharmonic + self.centrifugal
 
             if self.dipole_bool == True:
-                gen_tdm = Hamil(ID = 'tdm',
-                                maxV = self.maxV+1,
-                                coef = self.dipole_coef,
-                                beta = self.beta
+                gen_tdm = Hamil(ID     = 'tdm',
+                                maxV   = self.maxV+1,
+                                coef   = self.dipole_coef,
+                                beta   = self.beta, 
+                                method = 'fortran'
                                 )
                 self.tdm = gen_tdm.tdm
 
