@@ -358,10 +358,11 @@ class RunVibHam():
             print ()
             print ("\tGenerating Transition Dipole Moment Hamiltonian Matrix")
 
-            gen_hamil = Hamil(ID = 'tdm',
-                              maxV = self.maxV+1,
-                              coef = self.dipole_coef,
-                              beta = self.beta
+            gen_hamil = Hamil(ID     = 'tdm',
+                              maxV   = self.maxV+1,
+                              coef   = self.dipole_coef,
+                              beta   = self.beta, 
+                              method = self.args.Method
                               )
 
             self.tdm = gen_hamil.tdm
@@ -536,7 +537,7 @@ class RunVibHam():
         '''Function used to calculate the turning points along the energy curve'''
         tps = Spectra()
 
-        self.tps = np.zeros((self.maxJ+1, 2, self.maxV))
+        self.tps = np.zeros((self.maxJ+1, 2, self.maxV+1))
 
         for j in range(self.maxJ+1):
 
@@ -698,7 +699,7 @@ class RunVibHam():
         print ("\tPure Vibrational Constants on Different J-Surfaces\n")
 
         self.vib_spec_values = spectra.Vibrational(self.total_val, 
-                                                   self.args.Constants-1, 
+                                                   min(self.args.Constants+1, int(self.trunc_arr[0])),
                                                    self.maxJ
                                                    )
 
@@ -708,7 +709,7 @@ class RunVibHam():
             for j_ in range(spc[v_], spc[v_+1]):
                 print ("\t{:>14s}".format("J = " + str(j_)), end='')
             print ()
-            for vv_ in range(min(self.total_val.shape[1], self.args.Constants)):
+            for vv_ in range(min(int(self.trunc_arr[0]), self.args.Constants+1)):
                 if vv_ == 0:
                     print ("\t{:>6s}".format("we"), end=' ')
                 elif vv_ == 1:
@@ -727,102 +728,97 @@ class RunVibHam():
 
         self.BREAK()
 
-        print ("\tPure Rotational Constants on Different v-Surfaces\n")
+        if self.args.J != 0:
 
-        self.rot_spec_values = spectra.Rotational(self.total_val, 
-                                                  int(self.max_print_v[0]),
-                                                  self.args.Constants-1
-                                                   )
+            print ("\tPure Rotational Constants on Different v-Surfaces\n")
 
-        spc = np.append(np.arange(0, int(self.max_print_v[0])+1, 4), int(self.max_print_v[0])+1)
+            self.rot_spec_values = spectra.Rotational(self.total_val, 
+                                                      int(self.trunc_arr[0]),
+                                                      min(self.args.Constants, self.maxJ-1)
+                                                       )
 
-        for j_ in range(spc.size-1):
-            for v_ in range(spc[j_], spc[j_+1]):
-                print ("\t{:>14s}".format("v = " + str(v_)), end='')
-            print ()
-            for jj_ in range(min(self.total_val.shape[0], self.args.Constants)):
-                if jj_ == 0:
-                    print ("\t{:>6s}".format("Be"), end=' ')
-                elif jj_ == 1:
-                    print ("\t{:>6s}".format("De"), end=' ')
-                elif jj_ == 2:
-                    print ("\t{:>6s}".format("Fe"), end=' ')
-                elif jj_ == 3:
-                    print ("\t{:>6s}".format("He"), end=' ')
-                else:
-                    print ("\t{:>6s}".format(str(jj_) + "e"), end=' ')
+            spc = np.append(np.arange(0, int(self.max_print_v[0])+1, 4), int(self.max_print_v[0])+1)
 
+            for j_ in range(spc.size-1):
                 for v_ in range(spc[j_], spc[j_+1]):
-                    print ("\t{:>13e}".format(self.rot_spec_values[jj_, v_]), end=' ')
+                    print ("\t{:>14s}".format("v = " + str(v_)), end='')
                 print ()
-            print ()
-        
-        self.BREAK()
+                for jj_ in range(min(self.maxJ, self.args.Constants+1)):
+                    if jj_ == 0:
+                        print ("\t{:>6s}".format("Be"), end=' ')
+                    elif jj_ == 1:
+                        print ("\t{:>6s}".format("De"), end=' ')
+                    elif jj_ == 2:
+                        print ("\t{:>6s}".format("Fe"), end=' ')
+                    elif jj_ == 3:
+                        print ("\t{:>6s}".format("He"), end=' ')
+                    else:
+                        print ("\t{:>6s}".format(str(jj_) + "e"), end=' ')
 
-        self.rov_spec_values, vjmat = spectra.Rovibrational(self.total_val,
-                                                            self.args.Constants,
-                                                            self.args.Constants
-                                                            )
-
-        print ("\tVibrational Constants on the Full Surface\n")
-        print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
-
-        for v_ in range(self.args.Constants):
-            if v_ == 0:
-                s = 'we'
-            elif v_ == 1:
-                s = 'wexe'
-            elif v_ == 2:
-                s = 'weye' 
-            elif v_ == 3:
-                s = 'weze'
-            else:
-                s = 'we' + str(v_) + 'e'
-            print ("\t{:>6s}{:>21e}{:>15e}".format(s, self.rov_spec_values[v_], self.rov_spec_values[v_]*cm_mhz))
+                    for v_ in range(spc[j_], spc[j_+1]):
+                        print ("\t{:>13e}".format(self.rot_spec_values[jj_, v_]), end=' ')
+                    print ()
+                print ()
             
+            self.BREAK()
 
-        print ("\n")
-        print ("\tRotational Constants on the Full Surface\n")
-        print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
+            self.rov_spec_values, vjmat = spectra.Rovibrational(self.total_val,
+                                                                min(self.args.Constants, int(self.trunc_arr[0]))+1,
+                                                                min(self.args.Constants, self.maxJ)+1
+                                                                )
 
-        for j_ in range(self.args.Constants):
-            if j_ == 0:
-                s = 'Be'
-            elif j_ == 1:
-                s = 'De'
-            elif j_ == 2:
-                s = 'Fe'
-            elif j_ == 3:
-                s = 'He'
-            else:
-                s = str(v_) + 'e'
-            print ("\t{:>6s}{:>21e}{:>15e}".format(s, self.rov_spec_values[j_+v_+1], self.rov_spec_values[j_+v_+1]*cm_mhz))
+            print ("\tVibrational Constants on the Full Surface\n")
+            print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
 
-        
-        print ("\n")
-        p_list = ["\tRotation-Vibration Coupling Constants (cm^-1)\n", 
-                  "\tRotation-Vibration Coupling Constants (MHz)\n"]
+            for v_ in range(min(self.args.Constants, int(self.trunc_arr[0]))+1):
+                if v_ == 0:
+                    s = 'we'
+                elif v_ == 1:
+                    s = 'wexe'
+                elif v_ == 2:
+                    s = 'weye' 
+                elif v_ == 3:
+                    s = 'weze'
+                else:
+                    s = 'we' + str(v_) + 'e'
+                print ("\t{:>6s}{:>21e}{:>15e}".format(s, self.rov_spec_values[v_], self.rov_spec_values[v_]*cm_mhz))
+                
 
-        c_list = [1, cm_mhz]
-
-        for p in range(2):
-            print (p_list[p])
-            print ("\t{:>15s}".format(" "), end=' ')
-            for v_ in range(1, self.args.Constants):
-                print ("\t{:<11s}".format("v = " + str(v_)) + "  ", end='')
-            print ()
-            c = self.args.Constants*2
-            for j_ in range(1, self.args.Constants+1):
-                print ("\t{:<7s}".format("J = " + str(j_) + " "), end=' ')
-                for v_ in range(self.args.Constants-1):
-                    print ("\t{:>14e}".format(self.rov_spec_values[c]*c_list[p]), end=' ')
-                    c+=1
-                print ()
             print ("\n")
+            print ("\tRotational Constants on the Full Surface\n")
+            print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
 
+            for j_ in range(min(self.args.Constants, self.maxJ)+1):
+                if j_ == 0:
+                    s = 'Be'
+                elif j_ == 1:
+                    s = 'De'
+                elif j_ == 2:
+                    s = 'Fe'
+                elif j_ == 3:
+                    s = 'He'
+                else:
+                    s = str(j_) + 'e'
+                print ("\t{:>6s}{:>21e}{:>15e}".format(s, self.rov_spec_values[j_+v_+1], self.rov_spec_values[j_+v_+1]*cm_mhz))
 
-        self.BREAK()
-        
+            print ("\n")
+            print ("\tRovibrational Coupling Constants\n")
+            print ("\t{:>10s}{:>12s}{:>17s}{:>15s}".format("v", "J", "cm^-1", "MHz"))
+
+            num_rov = self.rov_spec_values.size - j_ - v_
+
+            for p in range(num_rov-2):
+                n = j_+v_+p+2
+                pv = vjmat[n,0]
+                pj = vjmat[n,1]
+
+                print ("\t{:>10d}{:>12d}{:>17e}{:>15e}".format(pv, 
+                                                               pj, 
+                                                               self.rov_spec_values[n], 
+                                                               self.rov_spec_values[n] * cm_mhz))
+
+            self.BREAK()
+
 
     def Dunham(self):
         '''Function used to interpolate the energy curve using a Dunham-type polynomial'''
@@ -852,7 +848,8 @@ class RunVibHam():
         for c, coef in enumerate(self.dunham_coef):
             print ("\t{:>9s}{:>18f}{:>23f}".format('a' + str(c), coef, coef*cm_mhz))
 
-
+        
+        print ("\n")
         print ("\tDunham Y-Parameters / Spectroscopic Equivalents\n")
         strings = ['Parameter', 'Spectroscopic Constant', 'cm^-1', 'MHz']
         print ('\t{:>0s}{:>25s}{:>15s}{:>20}'.format(*strings))
