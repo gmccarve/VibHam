@@ -321,13 +321,14 @@ class RunVibHam():
             print ()
             print ("\tGenerating Centrifugal Potential Hamiltonian Matrix")
 
-            gen_hamil = Hamil(ID = 'cent',
-                              maxJ = self.maxJ,
-                              maxV = self.maxV+1,
-                              rEq  = self.rEq,
-                              beta = self.beta,
+            gen_hamil = Hamil(ID           = 'cent',
+                              maxJ         = self.maxJ,
+                              maxV         = self.maxV+1,
+                              rEq          = self.rEq,
+                              beta         = self.beta,
                               reduced_mass = self.reduced_mass,
-                              Trap = self.args.Trap
+                              Trap         = self.args.Trap, 
+                              method       = self.args.Method
                               )
 
             self.centrifugal = gen_hamil.centrifugal
@@ -392,7 +393,6 @@ class RunVibHam():
                     self.stab_v -= 1
                 else:
                     stab_bool = True
-
 
         print ("\t\tMatrix Stable up to v = ", self.stab_v-1)
 
@@ -537,7 +537,7 @@ class RunVibHam():
         '''Function used to calculate the turning points along the energy curve'''
         tps = Spectra()
 
-        self.tps = np.zeros((self.maxJ+1, 2, self.maxV+1))
+        self.tps = np.zeros((self.maxJ+1, 2, self.stab_v))
 
         for j in range(self.maxJ+1):
 
@@ -699,7 +699,7 @@ class RunVibHam():
         print ("\tPure Vibrational Constants on Different J-Surfaces\n")
 
         self.vib_spec_values = spectra.Vibrational(self.total_val, 
-                                                   min(self.args.Constants+1, int(self.trunc_arr[0])),
+                                                   min(self.args.Constants, int(self.trunc_arr[0]))+1,
                                                    self.maxJ
                                                    )
 
@@ -709,7 +709,7 @@ class RunVibHam():
             for j_ in range(spc[v_], spc[v_+1]):
                 print ("\t{:>14s}".format("J = " + str(j_)), end='')
             print ()
-            for vv_ in range(min(int(self.trunc_arr[0]), self.args.Constants+1)):
+            for vv_ in range(min(self.args.Constants, int(self.trunc_arr[0]))+1):
                 if vv_ == 0:
                     print ("\t{:>6s}".format("we"), end=' ')
                 elif vv_ == 1:
@@ -762,9 +762,11 @@ class RunVibHam():
             
             self.BREAK()
 
+        if self.args.J > 1:
+
             self.rov_spec_values, vjmat = spectra.Rovibrational(self.total_val,
                                                                 min(self.args.Constants, int(self.trunc_arr[0]))+1,
-                                                                min(self.args.Constants, self.maxJ)+1
+                                                                min(self.args.Constants+1, self.maxJ)
                                                                 )
 
             print ("\tVibrational Constants on the Full Surface\n")
@@ -788,7 +790,7 @@ class RunVibHam():
             print ("\tRotational Constants on the Full Surface\n")
             print ("\t{:>10s}{:>17s}{:>15s}".format("Constant", "cm^-1", "MHz"))
 
-            for j_ in range(min(self.args.Constants, self.maxJ)+1):
+            for j_ in range(min(self.args.Constants+1, self.maxJ)):
                 if j_ == 0:
                     s = 'Be'
                 elif j_ == 1:
@@ -805,7 +807,7 @@ class RunVibHam():
             print ("\tRovibrational Coupling Constants\n")
             print ("\t{:>10s}{:>12s}{:>17s}{:>15s}".format("v", "J", "cm^-1", "MHz"))
 
-            num_rov = self.rov_spec_values.size - j_ - v_
+            num_rov = self.rov_spec_values.size - j_ - v_ - 2
 
             for p in range(num_rov-2):
                 n = j_+v_+p+2
