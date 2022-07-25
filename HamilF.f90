@@ -218,7 +218,7 @@ C
         DOUBLE PRECISION :: INTE
         DOUBLE PRECISION :: HVAL, BVAL, FVAL
 
-        DOUBLE PRECISION :: H(0:V,0:V), Hh(0:V,0:V)
+        DOUBLE PRECISION :: H(0:V,0:V)
 
         DOUBLE PRECISION :: HBAR, ANG2M, PI
         PARAMETER (HBAR = 1.054571817E-34)
@@ -281,6 +281,137 @@ C
         END
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+        subroutine Centrifugal(TRAP,V,BETA,REQ)
+
+C       Function used to populate the centrifugal potential Hamiltonian Matrix.
+C            These integrals are solved numerically using the trapezoid rule
+C
+C            Variables:
+C                Trap                - Number of intervals used for trapezoid rule
+C                self.maxJ           - Maximum rotational quantum number
+C                slef.maxV           - Maximum vibrational quantum number
+C                self.rEq            - Equilibrium bond distance
+C                self.beta           - Beta value for the diatomic molecule
+C                self.reduced_mass   - Reduced mass for the diatomic molecule
+C                old_mat             - Old centrifugal matrix to be read in
+C                J_Factor            - J(J+1) factor 
+C                H                   - Hamiltonian Matrix
+C                H_temp              - temporary Hamiltonian Matrix
+C                N_i                 - Normalization consant for bra
+C                N_j                 - Normalization consant for ket
+C                H_i                 - Hermite polynomial array for bra
+C                H_j                 - Hermite polynomial array for ket
+C                Hi                  - Hermite polynomial coefficient for bra
+C                Hj                  - Hermite polynomial coefficient for ket
+C                L                   - Left limit of integration
+C                R                   - Right limit of integraion
+C                x                   - Arrary of distance values used for integration
+C                hh                  - # Initial value for polynomial portion of the integral
+C                y1                  - Array for exponential values for integration
+C                y2                  - Array for 1/R^2 values for integration
+C                y3                  - Array for the polynomial portion of the integral
+C                y                   - Array for entire wave function
+C                inte                - running value of integral
+C
+C            Returns:
+C                H - Centrifugal potential Hamiltonian tensor
+
+        interface
+          function Hermite(X) RESULT(H)
+            INTEGER :: X
+            DOUBLE PRECISION :: H(X)
+          end function
+          function Norm(BETA,V) RESULT (N)
+            DOUBLE PRECISION :: BETA, N
+            INTEGER :: V
+          end function
+          function Fac(N) RESULT(P)
+            INTEGER :: N
+            DOUBLE PRECISION :: P
+          end function
+          function Ex(N) RESULT(X)
+            INTEGER :: N
+            DOUBLE PRECISION :: X
+          end function
+        end interface
+
+
+        INTEGER :: V, TRAP
+        DOUBLE PRECISION :: REQ, BETA
+
+        DOUBLE PRECISION :: L, R, X(TRAP)
+        DOUBLE PRECISION :: Y1(TRAP), Y2(TRAP), Y3(TRAP), Y(TRAP)
+
+        DOUBLE PRECISION :: HERMI(0:V), HERMII(0:V)
+        DOUBLE PRECISION :: NORMI, NORMII
+        DOUBLE PRECISION :: INTE
+
+        DOUBLE PRECISION :: H(0:V,0:V)
+
+        DOUBLE PRECISION :: HBAR, ANG2M
+        PARAMETER (HBAR = 1.054571817E-34)
+        PARAMETER (ANG2M = 1E-10)
+
+        
+        H = 0.d0
+
+        NORMI = 0.d0
+        NORMJ = 0.d0
+
+        L = -0.9 * REQ
+        R = -L
+
+        DO I=1,TRAP
+          X(I) = L + (R-L) * (I-1) / (TRAP-1)
+        ENDDO
+
+        Y1 = EXP(-(BETA*X)**2)
+        Y2 = (X + REQ)**2
+
+        DO NV=0,V
+          HERMI = Hermite(NV)
+          NORMI = Norm(BETA, NV)
+
+          HERMJ = 0
+
+          DO NVV=NV,V
+            HERMII = Hermite(NVV)
+            NORMII = Norm(BETA, NVV)
+
+            Y3 = 0.d0
+
+            DO I=0,NV
+              IF (HERMI(I) .NE. 0) THEN
+                DO II=0,NVV
+                  IF (HERMII(II) .NE. 0) THEN
+                    Y3 = Y3 + HERMI(I) * HERMII(II) *
+     1                   (BETA*X)**(I+II)
+                  ENDIF
+                ENDDO
+              ENDIF
+            ENDDO
+
+            INTE = 0.d0
+
+            Y = (Y1 / Y2) * Y3
+
+            DO I=2,TRAP
+              INTE = INTE + (X(I) - X(I-1)) * 0.5 * (Y(I) + Y(I-1))
+            ENDDO
+
+            H(NV,NVV) = INTE * NORMI * NORMII
+            H(NVV,NV) = INTE * NORMI * NORMII
+
+          ENDDO
+        ENDDO
+
+        OPEN (unit=12, file='cent.tmp', status='REPLACE')
+        WRITE (12,*) H
+        CLOSE (unit=12)
+
+
+        END
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
