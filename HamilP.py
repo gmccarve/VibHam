@@ -32,7 +32,9 @@ class Hamil():
                 self.harmonic = self.__Harmonic(*args, **kwargs)
 
             elif kwargs['method'] == 'fortran':
-                HamilF.harmonic(kwargs['maxV']-1, kwargs['nu'])
+                HamilF.harmonic(kwargs['maxV']-1, 
+                                kwargs['nu']
+                                )
                 self.harmonic = np.loadtxt("harmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
                 os.system("rm harmonic.tmp")
 
@@ -41,19 +43,41 @@ class Hamil():
                 self.anharmonic = self.__AnHarmonic(*args, **kwargs)
             
             elif kwargs['method'] == 'fortran':
-                HamilF.anharmonic(kwargs['maxV']-1, kwargs['coef'], kwargs['beta'])
+                HamilF.anharmonic(kwargs['maxV']-1, 
+                                  kwargs['coef'], 
+                                  kwargs['beta']
+                                  )
                 self.anharmonic = np.loadtxt("anharmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
                 os.system("rm anharmonic.tmp")
 
         elif kwargs['ID'] == 'cent':
-            self.centrifugal = self.__Centrifugal(*args, **kwargs)
+            if kwargs['method'] == 'python':
+                self.centrifugal = self.__Centrifugal(*args, **kwargs)
+
+            elif kwargs['method'] == 'fortran':
+                HamilF.centrifugal(kwargs['Trap'], 
+                                   kwargs['maxV']-1, 
+                                   kwargs['beta'], 
+                                   kwargs['rEq']
+                                   )
+                pre_cent = np.loadtxt("cent.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                os.system("rm cent.tmp")
+
+                self.centrifugal = self.__ApplyJFactor(kwargs['maxV'],
+                                                       kwargs['maxJ'],
+                                                       pre_cent, 
+                                                       kwargs['reduced_mass']
+                                                       )
         
         elif kwargs['ID'] == 'tdm':
             if kwargs['method'] == 'python':
                 self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
 
             elif kwargs['method'] == 'fortran':
-                HamilF.tdm(kwargs['maxV']-1, kwargs['coef'], kwargs['beta'])
+                HamilF.tdm(kwargs['maxV']-1, 
+                           kwargs['coef'], 
+                           kwargs['beta']
+                           )
                 self.tdm = np.loadtxt("tdm.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
                 os.system("rm tdm.tmp")
 
@@ -270,6 +294,11 @@ class Hamil():
         else:
             H_temp = np.zeros((self.maxV, self.maxV))
 
+            L = -0.9*self.rEq
+            R = -L
+
+            x = np.linspace(L, R, Trap)
+
             for v in range(self.maxV):               
                 N_i  = self.__Norm(v)                
                 H_i = self.__Hermite(v)             
@@ -277,11 +306,6 @@ class Hamil():
                 for vv in range(v, self.maxV):       
                     N_j  = self.__Norm(vv)           
                     H_j = self.__Hermite(vv)          
-
-                    L = -0.9*self.rEq           
-                    R = -L                      
-
-                    x = np.linspace(L, R, Trap) 
 
                     hh = 0.                     
 
@@ -301,7 +325,7 @@ class Hamil():
 
                     y1 = np.exp(-(self.beta*x)**2)
                     y2 = (x + self.rEq)**2                  
-                    y3 = hh                             
+                    y3 = hh
 
                     y = (y1 / y2) * y3  
 
@@ -312,7 +336,6 @@ class Hamil():
                     H_temp[v,vv] = inte*N_i*N_j
                     H_temp[vv,v] = inte*N_i*N_j
 
-
             H = np.zeros((self.maxJ+1, self.maxV, self.maxV))
             
             for J in range(0, self.maxJ+1):                # Introduce the J(J+1) prefactor for all J values to create Hamiltonian tensor
@@ -320,6 +343,17 @@ class Hamil():
                 H[J] = H_temp * J_Factor
             
             return H
+
+    def __ApplyJFactor(self, v, J, pre_cent, reduced_mass):
+
+        H = np.zeros((J+1, v, v))
+
+        for J in range(0, J+1):
+            J_Factor = (((0.5 * h_bar**2 * J * (J+1)) / (ang_m**2 * reduced_mass)))
+            H[J] = pre_cent * J_Factor
+
+        return H
+
 
     def __DipoleMomentMatrix(self, *args, **kwargs):
         '''Function used to populate the transition dipole moment matrix.

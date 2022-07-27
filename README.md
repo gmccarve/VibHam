@@ -28,6 +28,10 @@ or
 ```bash
  python3 /location/of/VibHam/VibHam.py -Interactive
 ```
+or
+```bash
+python /location/of/VibHam/GUI.py
+```
 
 Please see the input_parameters.txt file for more information regarding the choice of inputs. To include any given input, include " -$INPUT $OPTIONS" after you call the VibHam program and change $INPUT to be any of the available input choices and $OPTIONS to your chosen options.
 
