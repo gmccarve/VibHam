@@ -12,9 +12,11 @@ from Conversions import *
 from Atoms import Atoms
 from Interpolate import Interpolate
 from HamilP import Hamil, Wavefunctions
-from Spectra import Spectra
+from SpectraP import Spectra
 from Input import Input
 import GUI
+
+import SpectraF
 
 class RunVibHam():
 
@@ -663,14 +665,27 @@ class RunVibHam():
     def Excitations(self):
         '''Function used to calculate all rovibrational excitations'''
         excite = Spectra()
-        self.excitations = excite.Excitations(self.total_val,
-                                              self.total_vec,
-                                              int(self.max_print_v[0]),
-                                              self.maxJ,
-                                              self.tdm[:self.stab_v, :self.stab_v]
-                                              )
+        if self.args.Method == 'python':
+            self.excitations = excite.Excitations(self.total_val,
+                                                  self.total_vec,
+                                                  int(self.max_print_v[0]),
+                                                  self.maxJ,
+                                                  self.tdm[:self.stab_v, :self.stab_v]
+                                                  )
+        elif self.args.Method == 'fortran':
+            SpectraF.excitations(self.total_val,
+                                 self.total_vec,
+                                 int(self.max_print_v[0])-1,
+                                 self.maxV,
+                                 self.maxJ,
+                                 self.tdm[:self.stab_v, :self.stab_v]
+                                 )
 
-        strings = ['Vi', 'Ji', 'Vj', 'Jj', 'Ei', 'Ej', 'ΔE', 'TDM', 'f', 'A']
+            self.excitations = np.loadtxt("exc.tmp")
+            os.system("rm exc.tmp")
+
+
+        strings = ['Vi', 'Ji', 'Vf', 'Jf', 'Ei', 'Ef', 'ΔE', 'TDM', 'f', 'A']
         print ("\t{:<5s}{:<5s}{:<5s}{:<5s}{:>15s}{:>15s}{:>15s}{:>15s}{:>15s}{:>15s}".format(*strings))
     
         for c, val in enumerate(self.excitations):

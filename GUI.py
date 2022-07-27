@@ -14,7 +14,7 @@ from Conversions import *
 from Atoms import Atoms
 from Interpolate import Interpolate
 from HamilP import Hamil, Wavefunctions
-from Spectra import Spectra
+from SpectraP import Spectra
 from Windows import *
 
 import matplotlib.pyplot as plt

@@ -11,7 +11,7 @@ from Conversions import *
 from Atoms import Atoms
 from Interpolate import Interpolate
 from HamilP import Hamil, Wavefunctions
-from Spectra import Spectra
+from SpectraP import Spectra
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
