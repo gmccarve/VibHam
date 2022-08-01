@@ -125,8 +125,8 @@ class RunVibHam():
         self.Atoms = Atoms()
 
         if self.args.Atoms:
-            self.Atom1 = self.Atoms.AtomDict[self.args.Atoms[0]]
-            self.Atom2 = self.Atoms.AtomDict[self.args.Atoms[1]]
+            self.Atom1 = self.Atoms.AtomDict[self.args.Atoms[0].title()]
+            self.Atom2 = self.Atoms.AtomDict[self.args.Atoms[1].title()]
 
             print ()
             print ("\tAtom 1 - ", self.args.Atoms[0])

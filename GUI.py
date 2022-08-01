@@ -1645,7 +1645,8 @@ class TabWidget(QTabWidget):
                                   rEq  = self.rEq,
                                   beta = self.beta,
                                   reduced_mass = self.reduced_mass,
-                                  Trap = 2000
+                                  Trap = 2000,
+                                  method = 'fortran'
                                   )
                     self.centrifugal = gen_hamil.centrifugal
                     self.total = self.harmonic + self.anharmonic + self.centrifugal
