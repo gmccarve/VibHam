@@ -138,8 +138,8 @@ class RunVibHam():
 
             else:
                 try:                                
-                    self.Iso1 = self.Atom1[self.args.Isotopes[0]]
-                    self.Iso2 = self.Atom2[self.args.Isotopes[1]]
+                    self.Iso1 = self.args.Isotopes[0]
+                    self.Iso2 = self.args.Isotopes[1]
                 except:
                     print ("\tIsotope Not Found\n")
                     print ("\tQuitting Program\n")
