@@ -1379,7 +1379,7 @@ class TabWidget(QTabWidget):
         
         self.total = self.harmonic + self.anharmonic + self.centrifugal         # Initial total matrix
 
-        self.trunc_err_val = 0.01                                       # Maximum error for truncation
+        self.trunc_err_val = 0.1                                       # Maximum error for truncation
         self.max_trunc_val = self.maxV                                  # Maximum converged qauntum state
         self.trunc_err_arr = np.ones((self.max_trunc_val))*self.maxV    # Array of converged quantum states
         self.trunc = self.maxV
@@ -2229,7 +2229,7 @@ class TabWidget(QTabWidget):
                 self.rot_spec_table.removeRow(0)
         else:
             try:
-                self.rot_column = ["ν=" + str(e) for e in range(self.max_trunc_val+1, -1, -1)]
+                self.rot_column = ["ν=" + str(e) for e in range(self.max_trunc_val+2, -1, -1)]
                 self.rot_column.append("Constant")
                 self.rot_column = self.rot_column[::-1]
                 self.rot_row    = self.__get_rot_spec_id()
