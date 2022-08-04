@@ -728,13 +728,13 @@ class RunVibHam():
                 if vv_ == 0:
                     print ("\t{:>6s}".format("we"), end=' ')
                 elif vv_ == 1:
-                    print ("\t{:>6s}".format("ωexe"), end=' ')
+                    print ("\t{:>6s}".format("wexe"), end=' ')
                 elif vv_ == 2:
-                    print ("\t{:>6s}".format("ωeye"), end=' ')
+                    print ("\t{:>6s}".format("weye"), end=' ')
                 elif vv_ == 3:
-                    print ("\t{:>6s}".format("ωeze"), end=' ')
+                    print ("\t{:>6s}".format("weze"), end=' ')
                 else:
-                    print ("\t{:>6s}".format("ωe" + str(vv_) + "e"), end=' ')
+                    print ("\t{:>6s}".format("we" + str(vv_) + "e"), end=' ')
 
                 for j_ in range(spc[v_], spc[v_+1]):
                     print ("\t{:>13e}".format(self.vib_spec_values[vv_, j_]), end=' ')
