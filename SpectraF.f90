@@ -69,10 +69,10 @@ C                excitations_mat
 
                 IF (ABS(E) .GT. 0.d0) THEN
 
-                  IF (E .LT. 0.d0) THEN
+                  Tt(1,:) = MATMUL(TDM, VEC(JI+1,VI+1,:))
+                  T(:)    = MATMUL(Tt, VEC(JF+1,VF+1,:)) * D2CM
 
-                    Tt(1,:) = MATMUL(TDM, VEC(JI+1,VI+1,:))
-                    T(:)    = MATMUL(Tt, VEC(JF+1,VF+1,:)) * D2CM
+                  IF (E .LT. 0.d0) THEN
 
                     IF (JF .EQ. JI) THEN
                       S = 1
@@ -95,14 +95,13 @@ C                excitations_mat
                     A = A / He
 
                   ELSE
-                    T(1) = 0.d0
                     F = 0.d0
                     A = 0.d0
 
                   ENDIF
 
                   OPEN (unit=12, file='exc.tmp', position='APPEND')
-                  WRITE (12,*) VF,JF,VI,JI, EF,EI,E/CM2J, T(1),F,A
+                  WRITE (12,*) VF,JF,VI,JI, EF,EI,E/CM2J, T(1)/D2CM,F,A
                   CLOSE (unit=12)
 
                 ENDIF

@@ -228,13 +228,17 @@ class Spectra():
 
                             f = ((8  * np.pi**2 * m_e) / (3 * h**2 * e**2)) * E * S * t**2 / (2*jl + 1)
                             A = ((64 * np.pi**4) / (3 * h**4 * c**3)) * E**3 * S * t**2 / ((2*jl + 1)  * (4*np.pi*eps_0))
-                            excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E/cm_J, t, f, A]).T, axis=0)
+                            excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E/cm_J, t/D_CM, f, A]).T, axis=0)
+
+                            print (jl, jk, E/cm_J, A)
 
                         elif E > 0.:
                             f = 0
                             A = 0
 
-                            excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E/cm_J, t, f, A]).T, axis=0)
+                            excitations_mat = np.append(excitations_mat, np.asarray([vj, jl, vi, jk, E_jl, E_ik, E/cm_J, t/D_CM, f, A]).T, axis=0)
+
+                exit()
 
         return excitations_mat.reshape(int(excitations_mat.shape[0]/10), 10)[1:]
 

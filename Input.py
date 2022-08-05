@@ -84,7 +84,7 @@ def Input():
                         help='Degree of Standard Polynomial Fit for Dipole Moment',
                         type=int,
                         default=0,
-                        choices=np.arange(0, 12)
+                        choices=np.arange(0, 13)
                         )
 
     parser.add_argument('-EigVal',
