@@ -3,7 +3,7 @@ VibHam is an open source program to probe the rovibrational spectroscopy of diat
 
 ## Installation
 
-Clone VibHam soruce from github.
+Clone VibHam source from github.
 ```bash
 git clone https://github.com/gmccarve/VibHam.git
 ```
