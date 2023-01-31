@@ -135,6 +135,10 @@ i - Boolean to load interactive GUI
         Type                    - bool
         Default                 - False
 
+c - Boolean to run on the command-line
+
+        Type                    - bool
+        Default                 - False
 
 
 
