@@ -153,7 +153,11 @@ def Input():
                         )
 
     parser.add_argument('-i',
-                        action='store_true'
+                        action='store_true',
+                        )
+
+    parser.add_argument('-c',
+                        action='store_true',
                         )
 
     parser.add_argument('-Method',
