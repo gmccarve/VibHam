@@ -890,7 +890,7 @@ def Main():
 
     args = Input()
 
-    if args.i or args.Interactive:
+    if args.i or args.Interactive or not args.c:
         gui = GUI.main()
         sys.exit()
 
