@@ -6,6 +6,7 @@ VibHam is an open source program to probe the rovibrational spectroscopy of diat
 Clone VibHam source from github.
 ```bash
 git clone https://github.com/gmccarve/VibHam.git
+```
 
 These python packages are required for the either the command-line or GUI usage of Vibham:
 - numpy
@@ -15,7 +16,7 @@ These python packages are required for the either the command-line or GUI usage 
 - scikit-learn (sklearn)
 - PyQt5
 
-```
+
 
 ## Usage
 
