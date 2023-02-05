@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# This example uses the potential energy curve for CO developed by Shi et al:
+#	DOI -  https://doi.org/10.1002/qua.24036
+
+python3 ../../VibHam.py -c -Atoms c o -v 37 -J 10 -Data CO.txt -Energy_Fit 8 -Constants 3
