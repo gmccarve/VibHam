@@ -86,7 +86,7 @@ class TabWidget(QTabWidget):
 
     def __exit_program(selaf):
         '''Function used to exit the program and close all windows'''
-        exit()
+        sys.exit()
 
     def __openErrorMessage(self):
         '''Function used to open all error windows used for the VibHam GUI'''
@@ -452,9 +452,11 @@ class TabWidget(QTabWidget):
                                  [   1.39,      -113.2952548],
                                  [   1.41,      -113.2859214],
                                  [   1.43,      -113.2765329],
-                                 [   1.55,      -113.221006 ]]))
+                                 [   1.55,      -113.221006 ]])).T
 
-        self.data = self.data_.T.copy()
+        self.data = self.data_.copy()
+        self.__plot_datatable()
+        self.__show_datatable()
 
         self.atom1 = self.Atoms.AtomDict['C']
         self.atom2 = self.Atoms.AtomDict['O']
@@ -505,9 +507,11 @@ class TabWidget(QTabWidget):
                                  [1.254038,   0.06116228, 2.23154456],
                                  [1.318064,   0.0769219 , 2.28573043],
                                  [1.380652,   0.09195461, 2.3215812 ],
-                                 [1.442813,   0.10627412, 2.33529211]]))
+                                 [1.442813,   0.10627412, 2.33529211]])).T
 
-        self.data = self.data_.T.copy()
+        self.data = self.data_.copy()
+        self.__plot_datatable()
+        self.__show_datatable()
 
         self.atom1 = self.Atoms.AtomDict['H']
         self.atom2 = self.Atoms.AtomDict['F']
