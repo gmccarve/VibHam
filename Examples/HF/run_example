@@ -4,4 +4,4 @@
 #       DOI - https://doi.org/10.1016/j.jqsrt.2014.08.028 (Coxon)
 #	DOI - https://doi.org/10.1016/j.jqsrt.2013.02.005 (Li)
 
-python3 ../../VibHam.py -Atoms h f -v 37 -J 10 -Data HF.txt -Energy_Fit 8 -Dipole_Fit 5 -Constants 3
+python3 ../../VibHam.py -c -Atoms h f -v 37 -J 10 -Data HF.txt -Energy_Fit 8 -Dipole_Fit 5 -Constants 3
