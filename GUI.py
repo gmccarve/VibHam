@@ -422,16 +422,39 @@ class TabWidget(QTabWidget):
 
     def __load_CO_example_data(self):
         '''Used to load example data for carbon monoxide (CO)'''
-        try:
-            self.filename = self.path + "/Examples/CO/CO.txt"
-            self.data_ = np.loadtxt(self.filename).T
-            self.data = self.data_.copy()
-            self.loc.setText(self.filename)
-        except:
-            self.filename = self.path + "\Examples\CO\CO.txt"
-            self.data_ = np.loadtxt(self.filename).T
-            self.data = self.data_.copy()
-            self.loc.setText(self.filename)
+
+        self.data_ = np.asarray((
+                                [[   0.89,      -113.1491366],
+                                 [   0.91,      -113.1962448],
+                                 [   0.93,      -113.2359836],
+                                 [   0.95,      -113.2692236],
+                                 [   0.97,      -113.2967348],
+                                 [   0.99,      -113.3192031],
+                                 [   1.01,      -113.3372332],
+                                 [   1.03,      -113.3513626],
+                                 [   1.05,      -113.3620683],
+                                 [   1.07,      -113.3697737],
+                                 [   1.09,      -113.3748547],
+                                 [   1.11,      -113.3776453],
+                                 [   1.13,      -113.3784423],
+                                 [   1.15,      -113.377509 ],
+                                 [   1.17,      -113.3750798],
+                                 [   1.19,      -113.3713625],
+                                 [   1.21,      -113.3665418],
+                                 [   1.23,      -113.3607816],
+                                 [   1.25,      -113.3542286],
+                                 [   1.27,      -113.347009 ],
+                                 [   1.29,      -113.3392381],
+                                 [   1.31,      -113.3310167],
+                                 [   1.33,      -113.3224338],
+                                 [   1.35,      -113.3135679],
+                                 [   1.37,      -113.3044881],
+                                 [   1.39,      -113.2952548],
+                                 [   1.41,      -113.2859214],
+                                 [   1.43,      -113.2765329],
+                                 [   1.55,      -113.221006 ]]))
+
+        self.data = self.data_.T.copy()
 
         self.atom1 = self.Atoms.AtomDict['C']
         self.atom2 = self.Atoms.AtomDict['O']
@@ -457,17 +480,34 @@ class TabWidget(QTabWidget):
         self.__plot_datatable()
 
     def __load_HF_example_data(self):
-        '''Used to load example data for hydrogen fluoride (HF)'''
-        try:
-            self.filename = self.path + "/Examples/HF/HF.txt"
-            self.data_ = np.loadtxt(self.filename).T
-            self.data = self.data_.copy()
-            self.loc.setText(self.filename)
-        except:
-            self.filename = self.path + "\Examples\HF\HF.txt"
-            self.data_ = np.loadtxt(self.filename).T
-            self.data = self.data_.copy()
-            self.loc.setText(self.filename)
+        '''Used to load example data for hydrogen fluoride (HF)
+           Data utilized from :
+            Coxon et al. 
+                DOI - https://doi.org/10.1016/j.jqsrt.2014.08.028
+            Li et al.
+                DOI - https://doi.org/10.1016/j.jqsrt.2013.02.005
+        '''
+
+        self.data_ = np.asarray((
+                                [[0.670501,   0.13281191, 1.46467474],
+                                 [0.67949 ,   0.11989114, 1.4762561 ],
+                                 [0.689796,   0.10627412, 1.48964353],
+                                 [0.70176 ,   0.09195461, 1.50532307],
+                                 [0.715901,   0.0769219 , 1.52403493],
+                                 [0.733063,   0.06116228, 1.54698418],
+                                 [0.754787,   0.04465918, 1.57637224],
+                                 [0.784494,   0.02739353, 1.61708471],
+                                 [0.834163,   0.00934396, 1.68619188],
+                                 [0.91683897, 0.        , 1.802721  ],
+                                 [1.020549,   0.00934396, 1.94775494],
+                                 [1.113084,   0.02739353, 2.07097493],
+                                 [1.186889,   0.04465918, 2.16062047],
+                                 [1.254038,   0.06116228, 2.23154456],
+                                 [1.318064,   0.0769219 , 2.28573043],
+                                 [1.380652,   0.09195461, 2.3215812 ],
+                                 [1.442813,   0.10627412, 2.33529211]]))
+
+        self.data = self.data_.T.copy()
 
         self.atom1 = self.Atoms.AtomDict['H']
         self.atom2 = self.Atoms.AtomDict['F']
