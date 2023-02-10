@@ -16,6 +16,8 @@ These python packages are required for the either the command-line or GUI usage 
 - scikit-learn (sklearn)
 - PyQt5
 
+The VibHam program has been developed using python version 3.7. 
+
 
 
 ## Usage
