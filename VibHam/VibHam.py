@@ -16,7 +16,7 @@ from SpectraP import Spectra
 from Input import Input
 import GUI
 
-import SpectraF
+#import SpectraF
 
 class RunVibHam():
 

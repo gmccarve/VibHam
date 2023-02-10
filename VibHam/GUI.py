@@ -31,10 +31,14 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self.showMaximized()
+        #self.showMaximized()
 
         self._tabwidget = TabWidget(self)
         self.setCentralWidget(self._tabwidget)
+
+        screen = QApplication.primaryScreen()
+        size = screen.availableGeometry()
+        self.setGeometry(0, 0, size.width(), size.height())
 
 class TabWidget(QTabWidget):
     '''Tab widget used to separate the many different functions into individual tabs'''

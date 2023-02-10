@@ -473,6 +473,7 @@ C                H3(x) =  0 - 12x + 0x^2 + 8x^3  --> [ 0,-12, 0, 8]
 C
 
         INTEGER :: X, I, D
+        DOUBLE PRECISION :: H
         DOUBLE PRECISION :: HN1(0:X), DHN1(0:X)
         
         DIMENSION :: H(0:X)
