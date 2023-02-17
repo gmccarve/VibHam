@@ -25,21 +25,21 @@ The VibHam program has been developed using python version 3.7.6.
 
 Use a terminal to call the program
 ```bash
-python3 /location/of/VibHam/VibHam.py
+python /location/of/VibHam/VibHam.py
 ```
 
 Print the available input options without running VibHam
 ```bash
-python3 /location/of/VibHam/VibHam.py -h
+python /location/of/VibHam/VibHam.py -h
 ```
 
 Open the GUI for VibHam
 ```bash
-python3 /location/of/VibHam/VibHam.py -i
+python /location/of/VibHam/VibHam.py -i
 ```
 or
 ```bash
- python3 /location/of/VibHam/VibHam.py -Interactive
+ python /location/of/VibHam/VibHam.py -Interactive
 ```
 or
 ```bash
