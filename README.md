@@ -9,14 +9,15 @@ git clone https://github.com/gmccarve/VibHam.git
 ```
 
 These python packages are required for the either the command-line or GUI usage of Vibham:
-- numpy
-- pandas
-- matplotlib
-- scipy
-- scikit-learn (sklearn)
-- PyQt5
+- Python (3.7.6)
+- numpy (1.21.6)
+- pandas (1.3.5)
+- matplotlib (3.5.1)
+- scipy (1.7.3)
+- scikit-learn (1.0.2)
+- PyQt5 (5.15.7)
 
-The VibHam program has been developed using python version 3.7. 
+The VibHam program has been developed using python version 3.7.6. 
 
 
 
@@ -24,21 +25,21 @@ The VibHam program has been developed using python version 3.7.
 
 Use a terminal to call the program
 ```bash
-python3 /location/of/VibHam/VibHam.py
+python /location/of/VibHam/VibHam.py
 ```
 
 Print the available input options without running VibHam
 ```bash
-python3 /location/of/VibHam/VibHam.py -h
+python /location/of/VibHam/VibHam.py -h
 ```
 
 Open the GUI for VibHam
 ```bash
-python3 /location/of/VibHam/VibHam.py -i
+python /location/of/VibHam/VibHam.py -i
 ```
 or
 ```bash
- python3 /location/of/VibHam/VibHam.py -Interactive
+ python /location/of/VibHam/VibHam.py -Interactive
 ```
 or
 ```bash
