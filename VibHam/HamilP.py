@@ -8,8 +8,11 @@ from math import factorial as fac
 
 from Conversions import *
 
-import HamilF
-
+try:
+    import HamilF
+    HamilF_try = True
+except:
+    HamilF_try = False
 class Hamil():
     '''Class used to contain all functions used to construct the Hamiltonian Matrices
 
@@ -32,54 +35,66 @@ class Hamil():
                 self.harmonic = self.__Harmonic(*args, **kwargs)
 
             elif kwargs['method'] == 'fortran':
-                HamilF.harmonic(kwargs['maxV']-1, 
-                                kwargs['nu']
-                                )
-                self.harmonic = np.loadtxt("harmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
-                os.system("rm harmonic.tmp")
+                if HamilF_try == True:
+                    HamilF.harmonic(kwargs['maxV']-1, 
+                                    kwargs['nu']
+                                    )
+                    self.harmonic = np.loadtxt("harmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                    os.system("rm harmonic.tmp")
+                else:
+                    self.harmonic = self.__Harmonic(*args, **kwargs)
 
         elif kwargs['ID'] == 'anharm':
             if kwargs['method'] == 'python':
                 self.anharmonic = self.__AnHarmonic(*args, **kwargs)
             
             elif kwargs['method'] == 'fortran':
-                HamilF.anharmonic(kwargs['maxV']-1, 
-                                  kwargs['coef'], 
-                                  kwargs['beta']
-                                  )
-                self.anharmonic = np.loadtxt("anharmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
-                os.system("rm anharmonic.tmp")
+                if HamilF_try == True:
+                    HamilF.anharmonic(kwargs['maxV']-1, 
+                                      kwargs['coef'], 
+                                      kwargs['beta']
+                                      )
+                    self.anharmonic = np.loadtxt("anharmonic.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                    os.system("rm anharmonic.tmp")
+                else:
+                    self.anharmonic = self.__AnHarmonic(*args, **kwargs)
 
         elif kwargs['ID'] == 'cent':
             if kwargs['method'] == 'python':
                 self.centrifugal = self.__Centrifugal(*args, **kwargs)
 
             elif kwargs['method'] == 'fortran':
-                HamilF.centrifugal(kwargs['Trap'], 
-                                   kwargs['maxV']-1, 
-                                   kwargs['beta'], 
-                                   kwargs['rEq']
-                                   )
-                pre_cent = np.loadtxt("cent.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
-                os.system("rm cent.tmp")
+                if HamilF_try == True:
+                    HamilF.centrifugal(kwargs['Trap'], 
+                                       kwargs['maxV']-1, 
+                                       kwargs['beta'], 
+                                       kwargs['rEq']
+                                       )
+                    pre_cent = np.loadtxt("cent.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                    os.system("rm cent.tmp")
 
-                self.centrifugal = self.__ApplyJFactor(kwargs['maxV'],
-                                                       kwargs['maxJ'],
-                                                       pre_cent, 
-                                                       kwargs['reduced_mass']
-                                                       )
-        
+                    self.centrifugal = self.__ApplyJFactor(kwargs['maxV'],
+                                                           kwargs['maxJ'],
+                                                           pre_cent, 
+                                                           kwargs['reduced_mass']
+                                                           )
+                else:
+                    self.centrifugal = self.__Centrifugal(*args, **kwargs)
+
         elif kwargs['ID'] == 'tdm':
             if kwargs['method'] == 'python':
                 self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
 
             elif kwargs['method'] == 'fortran':
-                HamilF.tdm(kwargs['maxV']-1, 
-                           kwargs['coef'], 
-                           kwargs['beta']
-                           )
-                self.tdm = np.loadtxt("tdm.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
-                os.system("rm tdm.tmp")
+                if HamilF_try == True:
+                    HamilF.tdm(kwargs['maxV']-1, 
+                               kwargs['coef'], 
+                               kwargs['beta']
+                               )
+                    self.tdm = np.loadtxt("tdm.tmp").reshape(kwargs['maxV'], kwargs['maxV'])
+                    os.system("rm tdm.tmp")
+                else:
+                    self.tdm = self.__DipoleMomentMatrix(*args, **kwargs)
 
     def __Norm(self, v_):
         ''' Function to calculate the normalization constant for a harmonic oscillator wave fucntion of order v
