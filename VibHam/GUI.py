@@ -3808,6 +3808,7 @@ class TabWidget(QTabWidget):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
     win = MainWindow()
     win.show()
     app.exec_()
