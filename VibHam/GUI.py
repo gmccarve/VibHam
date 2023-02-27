@@ -36,9 +36,9 @@ class MainWindow(QMainWindow):
         self._tabwidget = TabWidget(self)
         self.setCentralWidget(self._tabwidget)
 
-        screen = QApplication.primaryScreen()
-        size = screen.availableGeometry()
-        self.setGeometry(0, 0, size.width(), size.height())
+        #screen = QApplication.primaryScreen()
+        #size = screen.availableGeometry()
+        #self.setGeometry(0, 0, size.width()-10, size.height()-10)
 
 class TabWidget(QTabWidget):
     '''Tab widget used to separate the many different functions into individual tabs'''
@@ -182,17 +182,17 @@ class TabWidget(QTabWidget):
         self.atom1 = self.Atoms.AtomDict['H']   # Dictionary of isotopes and their masses for atom #1
         self.atom2 = self.Atoms.AtomDict['H']   # Dictionary of isotopes and their masses for atom #2
 
-        self.iso1 = 0       # Identity of Isotope #1
-        self.iso2 = 0       # Identity of Isotope #2
+        self.iso1 = 0                           # Identity of Isotope #1
+        self.iso2 = 0                           # Identity of Isotope #2
 
-        self.mass1 = self.atom1[self.iso1]     # Mass of specific isotope for atom #1
-        self.mass2 = self.atom2[self.iso2]     # Mass of specific isotope for atom #2
+        self.mass1 = self.atom1[self.iso1]      # Mass of specific isotope for atom #1
+        self.mass2 = self.atom2[self.iso2]      # Mass of specific isotope for atom #2
 
-        self.energy_unit = 'Hartrees'       # Energy unit of data file
-        self.length_unit = 'Å'              # Distance unit of data file
-        self.dipole_unit = 'D'              # Dipole unit of data file
+        self.energy_unit = 'Hartrees'           # Energy unit of data file
+        self.length_unit = 'Å'                  # Distance unit of data file
+        self.dipole_unit = 'D'                  # Dipole unit of data file
         
-        self.charge = 0             # Charge of diatomic
+        self.charge = 0                         # Charge of diatomic
 
         # Load Example File
 
@@ -200,11 +200,9 @@ class TabWidget(QTabWidget):
         self.load_HF_example_btn.clicked.connect(self.__load_HF_example_data)
         self.load_HF_example_shortcut = QShortcut(QKeySequence("Ctrl+L"), self)
         self.load_HF_example_shortcut.activated.connect(self.__load_HF_example_data)
-        self.load_HF_example_btn.setFixedWidth(120)
 
         self.load_CO_example_btn = QPushButton("Load CO Example")
         self.load_CO_example_btn.clicked.connect(self.__load_CO_example_data)
-        self.load_CO_example_btn.setFixedWidth(120)
 
         # Location of datafile
         
@@ -212,7 +210,6 @@ class TabWidget(QTabWidget):
         self.browse_files.clicked.connect(self.__browsefiles)
         self.browse_files.clicked.connect(self.__show_datatable)
         self.browse_files.clicked.connect(self.__plot_datatable)
-        self.browse_files.setFixedWidth(120)
         self.browse_files.setToolTip("Browse for a datafile")
 
         self.browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
@@ -227,18 +224,15 @@ class TabWidget(QTabWidget):
         # Show the loaded data file
 
         self.data_table = QTableWidget()
-        self.data_table.setFixedWidth(440)
         self.data_table.installEventFilter(self)
 
         # Refresh the data arrays
 
         self.clear_data_btn = QPushButton("Clear Data")
         self.clear_data_btn.clicked.connect(self.__clear_data_values)
-        self.clear_data_btn.setFixedWidth(120)        
 
         self.refresh_data_btn = QPushButton("&Refresh Data")
         self.refresh_data_btn.clicked.connect(self.__refresh_data_values)
-        self.refresh_data_btn.setFixedWidth(120)
 
         self.refresh_data_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
         self.refresh_data_shortcut.activated.connect(self.__refresh_data_values)
@@ -252,8 +246,6 @@ class TabWidget(QTabWidget):
         # Define the atomic information
         self.atom1_lab = QLabel("Atom #1")
         self.atom2_lab = QLabel("Atom #2")
-        self.atom1_lab.setFixedWidth(100)
-        self.atom2_lab.setFixedWidth(100)
 
         # Define the atoms
 
@@ -268,7 +260,6 @@ class TabWidget(QTabWidget):
         self.atom1_id.currentIndexChanged.connect(self.__atom1_id_changed)
         self.atom1_id.currentIndexChanged.connect(self.__iso1_combo_selected)
         self.atom1_id.currentIndexChanged.connect(self.__mass1_str_changed)
-        self.atom1_id.setFixedWidth(100)
 
         self.atom2_id = QComboBox()
         self.atom2_id.addItems(self.Atoms.AtomDict.keys())
@@ -277,7 +268,6 @@ class TabWidget(QTabWidget):
         self.atom2_id.currentIndexChanged.connect(self.__atom2_id_changed)
         self.atom2_id.currentIndexChanged.connect(self.__iso2_combo_selected)
         self.atom2_id.currentIndexChanged.connect(self.__mass2_str_changed)
-        self.atom2_id.setFixedWidth(100)
 
         # Define the Isotopes
 
@@ -287,12 +277,10 @@ class TabWidget(QTabWidget):
         self.iso1_box = QComboBox()
         self.iso1_box.addItems([str(e) for e in self.atom1.keys()])
         self.iso1_box.currentIndexChanged.connect(self.__iso1_combo_selected)
-        self.iso1_box.setFixedWidth(100)
     
         self.iso2_box = QComboBox()
         self.iso2_box.addItems([str(e) for e in self.atom2.keys()])
         self.iso2_box.currentIndexChanged.connect(self.__iso2_combo_selected)
-        self.iso2_box.setFixedWidth(100)
 
         # Define the Masses
 
@@ -301,17 +289,14 @@ class TabWidget(QTabWidget):
 
         self.mass1_str = QLineEdit(str(round(self.mass1, 8)))
         self.mass1_str.editingFinished.connect(self.__mass1_str_changed)
-        self.mass1_str.setFixedWidth(100)
 
         self.mass2_str = QLineEdit(str(round(self.mass2, 8)))
         self.mass2_str.editingFinished.connect(self.__mass2_str_changed)
-        self.mass2_str.setFixedWidth(100)
 
         # Define the molecular charge
 
         self.charge_box = QSpinBox()
         self.charge_box.setRange(-10, 10)
-        self.charge_box.setFixedWidth(100)
         self.charge_box.valueChanged.connect(self.__charge_box_changed)
 
         # Define the choices for the input energy
@@ -320,107 +305,76 @@ class TabWidget(QTabWidget):
         self.energy_box.addItems(['Hartrees', 'kcal/mol', 'kj/mol', 'eV', 'j', 'wavenumbers'])
         self.energy_box.currentIndexChanged.connect(self.__energy_box_selected)
         self.energy_box.currentIndexChanged.connect(self.__plot_datatable)
-        self.energy_box.setFixedWidth(100)
 
         self.length_box = QComboBox()
         self.length_box.addItems(['Å', 'm', 'bohr'])
         self.length_box.currentIndexChanged.connect(self.__length_box_selected)
         self.length_box.currentIndexChanged.connect(self.__plot_datatable)
-        self.length_box.setFixedWidth(100)
 
         self.dipole_box = QComboBox()
         self.dipole_box.addItems(["D", "au"])
         self.dipole_box.currentIndexChanged.connect(self.__dipole_box_selected)
         self.dipole_box.currentIndexChanged.connect(self.__plot_datatable)
-        self.dipole_box.setFixedWidth(100)
 
         # Define the layout of the tab using a grid
 
-        self.spacer_right = QSpacerItem(1, 10, QSizePolicy.Expanding)
-        self.dotted_line1 = QLabel("-"*70)
-        self.dotted_line2 = QLabel("-"*70)
-        self.dotted_line0 = QLabel("-"*70)
-
         self.tab1.grid_layout = QGridLayout()
 
-        row=0
-        self.tab1.grid_layout.addWidget(self.load_HF_example_btn, row, 0, 1, 1, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.load_CO_example_btn, row, 1, 1, 1, alignment=Qt.AlignCenter)
 
-        self.tab1.grid_layout.addWidget(self.data_table, row, 5, 41, 1)
-        self.tab1.grid_layout.addWidget(self.data_plot, row, 7, 41, 1)
+        self.tab1.grid_layout_1 = QGridLayout()
 
-        row+=1
-        self.tab1.grid_layout.addWidget(self.clear_data_btn, row, 0, 1, 1, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.refresh_data_btn, row, 1, 1, 1, alignment=Qt.AlignCenter)
-        
-        row+=1
-        self.tab1.grid_layout.addWidget(self.browse_files, row, 0, 1, 1)
-        self.tab1.grid_layout.addWidget(self.loc, row, 1, 1, 4)
+        for j in range(2):
+            self.tab1.grid_layout_1.addWidget(QLabel(""), j, 0, 1, 2, alignment=Qt.AlignCenter)
 
-        self.spacer_right1 = QSpacerItem(1, 10, QSizePolicy.Expanding)
-        self.tab1.grid_layout.addItem(self.spacer_right1, row, 7)
+        self.tab1.grid_layout_1.addWidget(self.load_HF_example_btn, j+1, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_1.addWidget(self.load_CO_example_btn, j+1, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_1.addWidget(self.clear_data_btn,      j+2, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_1.addWidget(self.refresh_data_btn,    j+2, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_1.addWidget(self.browse_files,        j+3, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_1.addWidget(self.loc,                 j+3, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout.addLayout(self.tab1.grid_layout_1, 1, 0, 1, 1)
 
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel(""), row, 0, 1, 5, alignment=Qt.AlignCenter)
+        self.tab1.grid_layout_3 = QGridLayout()
+        self.tab1.grid_layout_3.addWidget(self.data_table, 0, 0, 5, 4)
+        self.tab1.grid_layout.addLayout(self.tab1.grid_layout_3, 0, 1, 5, 1)
+
+        self.tab1.grid_layout_4 = QGridLayout()
+        self.tab1.grid_layout_4.addWidget(self.data_plot, 0, 0, 10, 1)
+        self.tab1.grid_layout_4.addWidget(self.toolbar1,  11, 0, 1, 1, alignment=Qt.AlignCenter)
+        self.tab1.grid_layout.addLayout(self.tab1.grid_layout_4, 0, 4, 5, 1)
+
+        self.tab1.grid_layout_5 = QGridLayout()
+        self.tab1.grid_layout_5.addWidget(QLabel("-"*20),       0, 0, 1, 3, alignment=Qt.AlignCenter)
+        self.tab1.grid_layout_5.addWidget(self.atom1_lab,   1, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.atom2_lab,   1, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.element_lab, 2, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.atom1_id,    2, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.atom2_id,    2, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.iso_lab,     3, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.iso1_box,    3, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.iso2_box,    3, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.mass_lab,    4, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.mass1_str,   4, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_5.addWidget(self.mass2_str,   4, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout.addLayout(self.tab1.grid_layout_5, 2, 0, 1, 1)
     
-        row+=1
-        self.tab1.grid_layout.addWidget(self.dotted_line1, row, 0, 1, 5, alignment=Qt.AlignCenter)
-        
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel(""), row, 0, 1, 5, alignment=Qt.AlignCenter)
+        self.tab1.grid_layout_6 = QGridLayout()
+        self.tab1.grid_layout_6.addWidget(QLabel("-"*20),         0, 0, 1, 2, alignment=Qt.AlignCenter)
+        self.tab1.grid_layout_6.addWidget(QLabel("Energy Units"), 1, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(self.energy_box,        1, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(QLabel("Length Units"), 2, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(self.length_box,        2, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(QLabel("Dipole Units"), 3, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(self.dipole_box,        3, 1, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(QLabel("Charge"),       4, 0, 1, 1, alignment=Qt.AlignLeft)
+        self.tab1.grid_layout_6.addWidget(self.charge_box,        4, 1, 1, 1, alignment=Qt.AlignLeft)
 
-        row+=2
-        self.tab1.grid_layout.addWidget(self.atom1_lab, row, 1, 1, 2)
-        self.tab1.grid_layout.addWidget(self.atom2_lab, row, 3, 1, 2)
-    
-        row+=1
-        self.tab1.grid_layout.addWidget(self.element_lab, row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.atom1_id, row, 1, 1, 2)
-        self.tab1.grid_layout.addWidget(self.atom2_id, row, 3, 1, 2)
-    
-        row+=1
-        self.tab1.grid_layout.addWidget(self.iso_lab, row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.iso1_box, row, 1, 1, 2)
-        self.tab1.grid_layout.addWidget(self.iso2_box, row, 3, 1, 2)
-    
-        row+=1
-        self.tab1.grid_layout.addWidget(self.mass_lab, row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.mass1_str, row, 1, 1, 2)
-        self.tab1.grid_layout.addWidget(self.mass2_str, row, 3, 1, 2)
+        for j in range(5):
+            self.tab1.grid_layout_6.addWidget(QLabel(""), j+4, 0, 1, 2, alignment=Qt.AlignCenter)
 
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel(""), row, 0, 1, 5, alignment=Qt.AlignCenter)
+        self.tab1.grid_layout.addLayout(self.tab1.grid_layout_6, 3, 0, 1, 1)
 
-        row+=1
-        self.tab1.grid_layout.addWidget(self.dotted_line2, row, 0, 1, 5, alignment=Qt.AlignCenter)
-
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel(""), row, 0, 1, 5, alignment=Qt.AlignCenter)
-
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel("Energy Units"), row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.energy_box, row, 1, 1, 2)
-    
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel("Length Units"), row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.length_box, row, 1, 1, 2)
-
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel("Dipole Units"), row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.dipole_box, row, 1, 1, 2)
-
-        row+=1
-        self.tab1.grid_layout.addWidget(QLabel("Charge"), row, 0, alignment=Qt.AlignCenter)
-        self.tab1.grid_layout.addWidget(self.charge_box, row, 1, 1, 2)
-        
-        for j in range(25):
-            row+=1
-            self.tab1.grid_layout.addWidget(QLabel(""), row, 0, 1, 3, alignment=Qt.AlignCenter)
-
-        row+=1
-        self.tab1.grid_layout.addWidget(self.toolbar1, row, 7, 1, 3, alignment=Qt.AlignCenter)
-
+        self.tab1.grid_layout.setColumnStretch(1, 1)
 
         self.tab1.setLayout(self.tab1.grid_layout)
 
@@ -1558,10 +1512,10 @@ class TabWidget(QTabWidget):
 
         # Define the layout of the tab using a grid
     
-        self.dotted_line4 = QLabel("-"*120)
-        self.dotted_line5 = QLabel("-"*120)
-        self.dotted_line6 = QLabel("-"*120)
-        self.dotted_line7 = QLabel("-"*120)
+        self.dotted_line4 = QLabel("-"*60)
+        self.dotted_line5 = QLabel("-"*60)
+        self.dotted_line6 = QLabel("-"*60)
+        self.dotted_line7 = QLabel("-"*60)
 
         self.tab3.grid_layout = QGridLayout()
 
@@ -1577,7 +1531,7 @@ class TabWidget(QTabWidget):
         self.tab3.grid_layout.addWidget(self.eigenvalue_table, row, 4, 16, 4)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.dotted_line4, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.dotted_line4, row, 0, 1, 4, alignment=Qt.AlignCenter)
         
         row+=1
         self.tab3.grid_layout.addWidget(self.harm_lab, row, 0, alignment=Qt.AlignCenter)
@@ -1611,13 +1565,13 @@ class TabWidget(QTabWidget):
         self.tab3.grid_layout.addWidget(self.all_save_btn, row, 3)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.dotted_line5, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.dotted_line5, row, 0, 1, 4, alignment=Qt.AlignCenter)
         
         row+=1
-        self.tab3.grid_layout.addWidget(self.check_stabil_btn, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.check_stabil_btn, row, 0, 1, 4, alignment=Qt.AlignCenter)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.dotted_line6, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.dotted_line6, row, 0, 1, 4, alignment=Qt.AlignCenter)
         
         row+=1
         self.tab3.grid_layout.addWidget(self.max_trunc_lab, row, 0, alignment=Qt.AlignCenter)
@@ -1628,16 +1582,16 @@ class TabWidget(QTabWidget):
         self.tab3.grid_layout.addWidget(self.max_trunc_error_val, row, 1)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.dotted_line7, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.dotted_line7, row, 0, 1, 4, alignment=Qt.AlignCenter)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.view_eigen_btn, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.view_eigen_btn, row, 0, 1, 4, alignment=Qt.AlignCenter)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.view_contribution_btn, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.view_contribution_btn, row, 0, 1, 4, alignment=Qt.AlignCenter)
 
         row+=1
-        self.tab3.grid_layout.addWidget(self.refresh_eigenvalue_table, row, 0, 1, 4)
+        self.tab3.grid_layout.addWidget(self.refresh_eigenvalue_table, row, 0, 1, 4, alignment=Qt.AlignCenter)
 
         row+=1
         self.spacer_bottom3 = QSpacerItem(10, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
@@ -3808,6 +3762,7 @@ class TabWidget(QTabWidget):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
     win = MainWindow()
     win.show()
     app.exec_()
