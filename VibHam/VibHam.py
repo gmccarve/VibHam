@@ -24,11 +24,8 @@ class RunVibHam():
 
         self.maxV = self.args.v
         self.maxJ = self.args.J
-
-        try:
-            import SpectraF
-        except:
-            self.args['Method'] = 'python'
+        
+        self.args.Method = 'python'
 
     def BREAK(self):
         print ("\n\t*****************************************************\n")
