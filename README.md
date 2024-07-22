@@ -66,7 +66,11 @@ Then execute the "run_example" bash script:
 
 ## Citation
 
-VibHam is currently being prepared for submission.
+VibHam has been published in the Journal of Chemical Eduction 
+
+'''McCarver, G. A.; Hinde, R. J. VIBHAM: A Classroom Tool for Predicting the Rovibrational Spectra of Diatomic Molecules beyond the Harmonic Oscillator Approximation. Journal of Chemical Education 2024, 101, 1310-1318
+https://doi.org/10.1021/acs.jchemed.3c01145
+'''
 
 
 
